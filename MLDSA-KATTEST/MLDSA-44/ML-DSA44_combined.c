@@ -134,16 +134,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyeta_unpack(poly *r, const uint8_t *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyt1_pack
-*
-* Description: Bit-pack polynomial t1 with coefficients fitting in 10 bits.
-*              Input coefficients are assumed to be standard representatives.
-*
-* Arguments:   - uint8_t *r: pointer to output byte array with at least
-*                            POLYT1_PACKEDBYTES bytes
-*              - const poly *a: pointer to input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyt1_pack(uint8_t *r, const poly *a) {
     unsigned int i;
     DBENCH_START();
