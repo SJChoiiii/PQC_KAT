@@ -1720,7 +1720,7 @@ void PQCLEAN_MLDSA87_CLEAN_poly_challenge(poly *c, const uint8_t seed[CTILDEBYTE
     for (i = 0; i < MLDSA87_N; ++i) {
         c->coeffs[i] = 0;
     }
-    for (i = MLDSA87_N - TAU; i < MLDSA87_N; ++i) {
+    for (i = MLDSA87_N - TAU; i < MLDSA87_N; ++i) { 
         do {
             if (pos >= SHAKE256_RATE) {
                 shake256_inc_squeeze(buf, sizeof buf, &state);
@@ -1736,7 +1736,7 @@ void PQCLEAN_MLDSA87_CLEAN_poly_challenge(poly *c, const uint8_t seed[CTILDEBYTE
     }
     shake256_inc_ctx_release(&state);
 }
-
+ 
 /*************************************************
 * Name:        PQCLEAN_MLDSA87_CLEAN_polyeta_pack
 *

@@ -3592,7 +3592,7 @@ int MLDSA_KAT_TEST_HEDGED()
         for (j = 0; j < mlen_temp * (count_temp + 1); ++j)
         {
             if (m2[j] != m[j])
-            {
+            { 
                 fprintf(stderr, "Messages don't match\n");
                 return -1;
             }
@@ -3602,7 +3602,7 @@ int MLDSA_KAT_TEST_HEDGED()
         free(sm_temp);
         free(m);
         free(m2);
-        //printf("%d is done\n", count_temp);
+        printf("%d is done\n", count_temp);
     }
 
     printf("KAT_TEST_HEDGED DONE\n");

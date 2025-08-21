@@ -107,14 +107,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyeta_pack(uint8_t *r, const poly *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyeta_unpack
-*
-* Description: Unpack polynomial with coefficients in [-ETA,ETA].
-*
-* Arguments:   - poly *r: pointer to output polynomial
-*              - const uint8_t *a: byte array with bit-packed polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyeta_unpack(poly *r, const uint8_t *a) {
     unsigned int i;
     DBENCH_START();
@@ -2205,7 +2197,7 @@ void PQCLEAN_MLDSA44_CLEAN_polyvecl_pointwise_poly_montgomery(polyvecl *r, const
 * Arguments:   - poly *w: output polynomial
 *              - const polyvecl *u: pointer to first input vector
 *              - const polyvecl *v: pointer to second input vector
-**************************************************/
+**************************************************/ 
 
 /*************************************************
 * Name:        PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm
