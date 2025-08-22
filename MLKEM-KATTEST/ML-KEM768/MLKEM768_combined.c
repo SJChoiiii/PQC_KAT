@@ -1525,7 +1525,7 @@ int TEST_KAT_MLKEM()
         if(memcmp(ss2, ss_temp, 32)) return -1;
         
         
-        printf("%d is done\n", count);
+        //printf("%d is done\n", count);
     }
 
     printf("ML-KEM 768 KAT done\n");
