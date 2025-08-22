@@ -1,6 +1,6 @@
 # PQC KAT TEST
 * **ML-DSA 44, 65, 87**
-* ML-KEM 512, 768, 1024
+* **ML-KEM 512, 768, 1024**
 
 **BOLD** is complete
 
