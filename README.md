@@ -1,4 +1,4 @@
-# PQC KAT TEST
+# PQC KAT
 * **ML-DSA 44, 65, 87**
 * **ML-KEM 512, 768, 1024**
 

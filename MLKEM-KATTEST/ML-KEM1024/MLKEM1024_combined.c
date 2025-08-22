@@ -1419,7 +1419,7 @@ static uint8_t hex2bin(const char* s, uint8_t *out, uint64_t outlen) {
     uint64_t L = strlen(s);
     // 공백/개행 제거
     while (L && (s[L - 1] == '\n' || s[L - 1] == '\r' || s[L - 1] == ' ' || s[L - 1] == '\t' || s[0] == ' ')) L--;
-    if (L % 2) { printf("L is %d,%s", L, s); printf("test"); outlen = 0; return -1; }
+    if (L % 2) { printf("L is %d, %s", L, s); outlen = 0; return -1; }
     if (!out) return -1;
     for (uint64_t i = 0; i < L / 2; i++) {
         int hi = hexnibble(s[2 * i]), lo = hexnibble(s[2 * i + 1]);
@@ -1429,7 +1429,6 @@ static uint8_t hex2bin(const char* s, uint8_t *out, uint64_t outlen) {
     outlen = L / 2;
     return 1;
 }
-
 
 static bool parse_line(char* line, char* key, char* out) {
     char* p = strstr(line, "=");
@@ -1509,76 +1508,33 @@ int TEST_KAT_MLKEM()
         uint8_t invalid_ss_temp[32] = {0,};
 
         get_kat_parameter(fp, &count, 5);
-        if(count >= 999)
-        {
-            get_kat_parameter(fp, z_temp, 32);
-            get_kat_parameter(fp, d_temp, 32);
-            get_kat_parameter(fp, msg, 32);
+        get_kat_parameter(fp, z_temp, 32);
+        get_kat_parameter(fp, d_temp, 32);
+        get_kat_parameter(fp, msg, 32);
 
-            uint8_t temp[512];
-            get_kat_parameter(fp, temp, 512);
-            get_kat_parameter(fp, pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES);
-            get_kat_parameter(fp, sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES);
-            get_kat_parameter(fp, invalid_ct_temp, KYBER_CIPHERTEXTBYTES);
-            get_kat_parameter(fp, invalid_ss_temp, 32);
-            get_kat_parameter(fp, ct_temp, KYBER_CIPHERTEXTBYTES);
-            get_kat_parameter(fp, ss_temp, 32);
+        uint8_t temp[512];
+        get_kat_parameter(fp, temp, 512);
 
-            // PRINT_X(pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES);
-            // PRINT_X(sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES);
-            // PRINT_X(ct_temp, KYBER_CIPHERTEXTBYTES);
-            // PRINT_X(ss_temp, 32);
+        get_kat_parameter(fp, pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES);
+        get_kat_parameter(fp, sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES);
+        get_kat_parameter(fp, invalid_ct_temp, KYBER_CIPHERTEXTBYTES);
+        get_kat_parameter(fp, invalid_ss_temp, 32);
+        get_kat_parameter(fp, ct_temp, KYBER_CIPHERTEXTBYTES);
+        get_kat_parameter(fp, ss_temp, 32);
 
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_KAT(pk, sk, d_temp, z_temp);
-            if(memcmp(pk, pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES)) return -1;
-            if(memcmp(sk, sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES)) return -1;
+        PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_KAT(pk, sk, d_temp, z_temp);
+        if(memcmp(pk, pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES)) return -1;
+        if(memcmp(sk, sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES)) return -1;
 
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_KAT(ct, ss, pk, msg);
-            
-            //PRINT_X(ct, KYBER_CIPHERTEXTBYTES);
-            //PRINT_X(ss, 32);
-            if(memcmp(ct, ct_temp, KYBER_CIPHERTEXTBYTES)) return -1;
-            if(memcmp(ss, ss_temp, 32)) return -1;
+        PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_KAT(ct, ss, pk, msg);
 
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec_KAT(ss2, ct, sk, invalid_ct_temp, invalid_ss_temp);
-            if(memcmp(ss2, ss_temp, 32)) return -1;
-            
-            
-            //printf("%d is done\n", count);
-        }
-        else
-        {
-            get_kat_parameter(fp, z_temp, 32);
-            get_kat_parameter(fp, d_temp, 32);
-            get_kat_parameter(fp, msg, 32);
+        if(memcmp(ct, ct_temp, KYBER_CIPHERTEXTBYTES)) return -1;
+        if(memcmp(ss, ss_temp, 32)) return -1;
 
-            uint8_t temp[512];
-            get_kat_parameter(fp, temp, 512);
-            get_kat_parameter(fp, pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES);
-            get_kat_parameter(fp, sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES);
-            get_kat_parameter(fp, invalid_ct_temp, KYBER_CIPHERTEXTBYTES);
-            get_kat_parameter(fp, invalid_ss_temp, 32);
-            get_kat_parameter(fp, ct_temp, KYBER_CIPHERTEXTBYTES);
-            get_kat_parameter(fp, ss_temp, 32);
-
-            
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_KAT(pk, sk, d_temp, z_temp);
-            if(memcmp(pk, pk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_PUBLICKEYBYTES)) return -1;
-            if(memcmp(sk, sk_temp, PQCLEAN_MLKEM1024_CLEAN_CRYPTO_SECRETKEYBYTES)) return -1;
-
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_KAT(ct, ss, pk, msg);
-            
-
-
-            if(memcmp(ct, ct_temp, KYBER_CIPHERTEXTBYTES)) return -1;
-            if(memcmp(ss, ss_temp, 32)) return -1;
-
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec_KAT(ss2, ct, sk, invalid_ct_temp, invalid_ss_temp);
-            if(memcmp(ss2, ss_temp, 32)) return -1;
-            
-            
-            //printf("%d is done\n", count);
-        }
+        PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec_KAT(ss2, ct, sk, invalid_ct_temp, invalid_ss_temp);
+        if(memcmp(ss2, ss_temp, 32)) return -1;
+        
+        //printf("%d is done\n", count);
     }
 
     printf("ML-KEM 1024 KAT done\n");
