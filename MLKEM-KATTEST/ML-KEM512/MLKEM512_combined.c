@@ -1311,6 +1311,46 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const 
 }
 
 
+int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec_KAT(uint8_t *ss, const uint8_t *ct, const uint8_t *sk, uint8_t *invalid_ct, uint8_t *invalid_ss) 
+{
+    int fail;
+    uint8_t buf[2 * KYBER_SYMBYTES];
+    /* Will contain key, coins */
+    uint8_t kr[2 * KYBER_SYMBYTES];
+    uint8_t cmp[KYBER_CIPHERTEXTBYTES + KYBER_SYMBYTES];    // cmp에 하위 32byte가 추가로 생김 -> 이거 왜 생김 쓸모가 없는디
+    const uint8_t *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;   
+
+
+    PQCLEAN_MLKEM512_CLEAN_indcpa_dec(buf, ct, sk);         // buf에 message값 복호화
+
+    /* Multitarget countermeasure for coins + contributory KEM */
+    memcpy(buf + KYBER_SYMBYTES, sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, KYBER_SYMBYTES);   // H(pk)값을 가져오고 -> buf : m || H(pk)
+    hash_g(kr, buf, 2 * KYBER_SYMBYTES);    // m || H(pk)를 이용해서 K, r 을 만들어주고
+
+    /* coins are in kr+KYBER_SYMBYTES */
+    PQCLEAN_MLKEM512_CLEAN_indcpa_enc(cmp, buf, pk, kr + KYBER_SYMBYTES);
+    
+    
+    // 같으면 0, 다르면 1을 뱉는 함수
+    fail = PQCLEAN_MLKEM512_CLEAN_verify(ct, cmp, KYBER_CIPHERTEXTBYTES);
+
+    uint8_t ss_temp[32];
+    /* Compute rejection key */
+    rkprf(ss, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, ct);  // sk의 마지막 32byte(random z 값), ciphertext를 이용해서 ss에 저장     J(z||c)
+
+    // test invalid ct, ss
+    rkprf(ss_temp, sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, invalid_ct);  // sk의 마지막 32byte(random z 값), ciphertext를 이용해서 ss에 저장     J(z||c)
+    if(memcmp(ss_temp, invalid_ss, 32)) return -1;
+    // 여기까지에서 true key K는 kr의 상위 32byte, rejction key는 ss임 
+
+    /* Copy true key to return buffer if fail is false */
+    // fail이 0 -> kr을 ss에 저장, 1 -> 그대로
+    PQCLEAN_MLKEM512_CLEAN_cmov(ss, kr, KYBER_SYMBYTES, (uint8_t) (1 - fail));
+
+    return 0;
+}
+
+
 int TEST()
 {
 	int ret = 0;
@@ -1470,7 +1510,7 @@ int TEST_KAT_MLKEM()
         if(memcmp(ct, ct_temp, KYBER_CIPHERTEXTBYTES)) return -1;
         if(memcmp(ss, ss_temp, 32)) return -1;
 
-        PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(ss2, ct, sk);
+        PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec_KAT(ss2, ct, sk, invalid_ct_temp, invalid_ss_temp);
         if(memcmp(ss2, ss_temp, 32)) return -1;
         
         
