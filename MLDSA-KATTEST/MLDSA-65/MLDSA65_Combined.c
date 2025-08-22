@@ -2744,55 +2744,6 @@ int PQCLEAN_MLDSA65_CLEAN_crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
 }
 
 
-int PQCLEAN_MLDSA65_CLEAN_crypto_sign_keypair_KAT(uint8_t *pk, uint8_t *sk, uint8_t *seed) {
-    uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES];
-    uint8_t tr[TRBYTES];
-    const uint8_t *rho, *rhoprime, *key;
-    polyvecl mat[MLDSA65_K];
-    polyvecl s1, s1hat;
-    polyveck s2, t1, t0;
-
-    /* Get randomness for rho, rhoprime and key */
-    //randombytes_win32_randombytes(seedbuf, SEEDBYTES);
-    memcpy(seedbuf, seed, SEEDBYTES);
-    seedbuf[SEEDBYTES + 0] = MLDSA65_K;
-    seedbuf[SEEDBYTES + 1] = MLDSA65_L;
-    shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
-    
-    
-    rho = seedbuf;
-    rhoprime = rho + SEEDBYTES;
-    key = rhoprime + CRHBYTES;
-
-    /* Expand matrix */
-    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_expand(mat, rho);
-
-    /* Sample short vectors s1 and s2 */
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_uniform_eta(&s1, rhoprime, 0);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_uniform_eta(&s2, rhoprime, MLDSA65_L);
-
-    /* Matrix-vector multiplication */
-    s1hat = s1;
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_ntt(&s1hat);
-    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&t1);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&t1);
-
-    /* Add error vector s2 */
-    PQCLEAN_MLDSA65_CLEAN_polyveck_add(&t1, &t1, &s2);
-
-    /* Extract t1 and write public key */
-    PQCLEAN_MLDSA65_CLEAN_polyveck_caddq(&t1);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_power2round(&t1, &t0, &t1);
-    PQCLEAN_MLDSA65_CLEAN_pack_pk(pk, rho, &t1);
-
-    /* Compute H(rho, t1) and write secret key */
-    shake256(tr, TRBYTES, pk, PQCLEAN_MLDSA65_CLEAN_CRYPTO_PUBLICKEYBYTES);
-    PQCLEAN_MLDSA65_CLEAN_pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
-
-    return 0;
-}
-
 /*************************************************
 * Name:        crypto_sign_signature
 *
@@ -2925,122 +2876,6 @@ rej:
     return 0;
 }
 
-int PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature_ctx_KAT(uint8_t *sig,
-        size_t *siglen,
-        const uint8_t *m,
-        size_t mlen,
-        const uint8_t *ctx,
-        size_t ctxlen,
-        const uint8_t *sk,
-        uint8_t *rng) {
-    unsigned int n;
-    uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + RNDBYTES + 2 * CRHBYTES];
-    uint8_t *rho, *tr, *key, *mu, *rhoprime, *rnd;
-    uint16_t nonce = 0;
-    polyvecl mat[MLDSA65_K], s1, y, z;
-    polyveck t0, s2, w1, w0, h;
-    poly cp;
-    shake256incctx state;
-
-    if (ctxlen > 255) {
-        return -1;
-    }
-
-    rho = seedbuf;
-    tr = rho + SEEDBYTES;
-    key = tr + TRBYTES;
-    rnd = key + SEEDBYTES;
-    mu = rnd + RNDBYTES;
-    rhoprime = mu + CRHBYTES;
-    PQCLEAN_MLDSA65_CLEAN_unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
-
-    /* Compute mu = CRH(tr, 0, ctxlen, ctx, msg) */
-    mu[0] = 0;
-    mu[1] = (uint8_t)ctxlen;
-    shake256_inc_init(&state);
-    shake256_inc_absorb(&state, tr, TRBYTES);
-    shake256_inc_absorb(&state, mu, 2);
-    shake256_inc_absorb(&state, ctx, ctxlen);
-    shake256_inc_absorb(&state, m, mlen);
-    shake256_inc_finalize(&state);
-    shake256_inc_squeeze(mu, CRHBYTES, &state);
-    shake256_inc_ctx_release(&state);
-
-    //randombytes_win32_randombytes(rnd, RNDBYTES);
-    memcpy(rnd, rng, RNDBYTES);
-    shake256(rhoprime, CRHBYTES, key, SEEDBYTES + RNDBYTES + CRHBYTES);
-
-    /* Expand matrix and transform vectors */
-    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_expand(mat, rho);
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_ntt(&s1);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_ntt(&s2);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_ntt(&t0);
-
-rej:
-    /* Sample intermediate vector y */
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
-
-    /* Matrix-vector multiplication */
-    z = y;
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_ntt(&z);
-    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&w1);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&w1);
-
-    /* Decompose w and call the random oracle */
-    PQCLEAN_MLDSA65_CLEAN_polyveck_caddq(&w1);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_decompose(&w1, &w0, &w1);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_pack_w1(sig, &w1);
-
-    shake256_inc_init(&state);
-    shake256_inc_absorb(&state, mu, CRHBYTES);
-    shake256_inc_absorb(&state, sig, MLDSA65_K * POLYW1_PACKEDBYTES);
-    shake256_inc_finalize(&state);
-    shake256_inc_squeeze(sig, CTILDEBYTES, &state);
-    shake256_inc_ctx_release(&state);
-    PQCLEAN_MLDSA65_CLEAN_poly_challenge(&cp, sig);
-    PQCLEAN_MLDSA65_CLEAN_poly_ntt(&cp);
-
-    /* Compute z, reject if it reveals secret */
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_invntt_tomont(&z);
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_add(&z, &z, &y);
-    PQCLEAN_MLDSA65_CLEAN_polyvecl_reduce(&z);
-    if (PQCLEAN_MLDSA65_CLEAN_polyvecl_chknorm(&z, GAMMA1 - BETA)) {
-        goto rej;
-    }
-
-    /* Check that subtracting cs2 does not change high bits of w and low bits
-     * do not reveal secret information */
-    PQCLEAN_MLDSA65_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&h);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_sub(&w0, &w0, &h);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&w0);
-    if (PQCLEAN_MLDSA65_CLEAN_polyveck_chknorm(&w0, GAMMA2 - BETA)) {
-        goto rej;
-    }
-
-    /* Compute hints for w1 */
-    PQCLEAN_MLDSA65_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &t0);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&h);
-    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&h);
-    if (PQCLEAN_MLDSA65_CLEAN_polyveck_chknorm(&h, GAMMA2)) {
-        goto rej;
-    }
-
-    PQCLEAN_MLDSA65_CLEAN_polyveck_add(&w0, &w0, &h);
-    n = PQCLEAN_MLDSA65_CLEAN_polyveck_make_hint(&h, &w0, &w1);
-    if (n > OMEGA) {
-        goto rej;
-    }
-
-    /* Write signature */
-    PQCLEAN_MLDSA65_CLEAN_pack_sig(sig, sig, &z, &h);
-    *siglen = PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES;
-    return 0;
-}
-
-
 /*************************************************
 * Name:        crypto_sign
 *
@@ -3073,25 +2908,6 @@ int PQCLEAN_MLDSA65_CLEAN_crypto_sign_ctx(uint8_t *sm,
         sm[PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
     }
     ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature_ctx(sm, smlen, sm + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES, mlen, ctx, ctxlen, sk);
-    *smlen += mlen;
-    return ret;
-}
-
-int PQCLEAN_MLDSA65_CLEAN_crypto_sign_ctx_KAT(uint8_t *sm,
-        size_t *smlen,
-        const uint8_t *m,
-        size_t mlen,
-        const uint8_t *ctx,
-        size_t ctxlen,
-        const uint8_t *sk,
-        uint8_t *rnd) {
-    int ret;
-    size_t i;
-
-    for (i = 0; i < mlen; ++i) {
-        sm[PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
-    }
-    ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature_ctx_KAT(sm, smlen, sm + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES, mlen, ctx, ctxlen, sk, rnd);
     *smlen += mlen;
     return ret;
 }
@@ -3244,6 +3060,190 @@ badsig:
 }
 
 
+int PQCLEAN_MLDSA65_CLEAN_crypto_sign_keypair_KAT(uint8_t *pk, uint8_t *sk, uint8_t *seed) {
+    uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES];
+    uint8_t tr[TRBYTES];
+    const uint8_t *rho, *rhoprime, *key;
+    polyvecl mat[MLDSA65_K];
+    polyvecl s1, s1hat;
+    polyveck s2, t1, t0;
+
+    /* Get randomness for rho, rhoprime and key */
+    //randombytes_win32_randombytes(seedbuf, SEEDBYTES);
+    memcpy(seedbuf, seed, SEEDBYTES);
+    seedbuf[SEEDBYTES + 0] = MLDSA65_K;
+    seedbuf[SEEDBYTES + 1] = MLDSA65_L;
+    shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);
+    
+    
+    rho = seedbuf;
+    rhoprime = rho + SEEDBYTES;
+    key = rhoprime + CRHBYTES;
+
+    /* Expand matrix */
+    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_expand(mat, rho);
+
+    /* Sample short vectors s1 and s2 */
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_uniform_eta(&s1, rhoprime, 0);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_uniform_eta(&s2, rhoprime, MLDSA65_L);
+
+    /* Matrix-vector multiplication */
+    s1hat = s1;
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_ntt(&s1hat);
+    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&t1);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&t1);
+
+    /* Add error vector s2 */
+    PQCLEAN_MLDSA65_CLEAN_polyveck_add(&t1, &t1, &s2);
+
+    /* Extract t1 and write public key */
+    PQCLEAN_MLDSA65_CLEAN_polyveck_caddq(&t1);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_power2round(&t1, &t0, &t1);
+    PQCLEAN_MLDSA65_CLEAN_pack_pk(pk, rho, &t1);
+
+    /* Compute H(rho, t1) and write secret key */
+    shake256(tr, TRBYTES, pk, PQCLEAN_MLDSA65_CLEAN_CRYPTO_PUBLICKEYBYTES);
+    PQCLEAN_MLDSA65_CLEAN_pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
+
+    return 0;
+}
+
+
+int PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature_ctx_KAT(uint8_t *sig,
+        size_t *siglen,
+        const uint8_t *m,
+        size_t mlen,
+        const uint8_t *ctx,
+        size_t ctxlen,
+        const uint8_t *sk,
+        uint8_t *rng) {
+    unsigned int n;
+    uint8_t seedbuf[2 * SEEDBYTES + TRBYTES + RNDBYTES + 2 * CRHBYTES];
+    uint8_t *rho, *tr, *key, *mu, *rhoprime, *rnd;
+    uint16_t nonce = 0;
+    polyvecl mat[MLDSA65_K], s1, y, z;
+    polyveck t0, s2, w1, w0, h;
+    poly cp;
+    shake256incctx state;
+
+    if (ctxlen > 255) {
+        return -1;
+    }
+
+    rho = seedbuf;
+    tr = rho + SEEDBYTES;
+    key = tr + TRBYTES;
+    rnd = key + SEEDBYTES;
+    mu = rnd + RNDBYTES;
+    rhoprime = mu + CRHBYTES;
+    PQCLEAN_MLDSA65_CLEAN_unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
+
+    /* Compute mu = CRH(tr, 0, ctxlen, ctx, msg) */
+    mu[0] = 0;
+    mu[1] = (uint8_t)ctxlen;
+    shake256_inc_init(&state);
+    shake256_inc_absorb(&state, tr, TRBYTES);
+    shake256_inc_absorb(&state, mu, 2);
+    shake256_inc_absorb(&state, ctx, ctxlen);
+    shake256_inc_absorb(&state, m, mlen);
+    shake256_inc_finalize(&state);
+    shake256_inc_squeeze(mu, CRHBYTES, &state);
+    shake256_inc_ctx_release(&state);
+
+    //randombytes_win32_randombytes(rnd, RNDBYTES);
+    memcpy(rnd, rng, RNDBYTES);
+    shake256(rhoprime, CRHBYTES, key, SEEDBYTES + RNDBYTES + CRHBYTES);
+
+    /* Expand matrix and transform vectors */
+    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_expand(mat, rho);
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_ntt(&s1);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_ntt(&s2);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_ntt(&t0);
+
+rej:
+    /* Sample intermediate vector y */
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
+
+    /* Matrix-vector multiplication */
+    z = y;
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_ntt(&z);
+    PQCLEAN_MLDSA65_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&w1);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&w1);
+
+    /* Decompose w and call the random oracle */
+    PQCLEAN_MLDSA65_CLEAN_polyveck_caddq(&w1);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_decompose(&w1, &w0, &w1);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_pack_w1(sig, &w1);
+
+    shake256_inc_init(&state);
+    shake256_inc_absorb(&state, mu, CRHBYTES);
+    shake256_inc_absorb(&state, sig, MLDSA65_K * POLYW1_PACKEDBYTES);
+    shake256_inc_finalize(&state);
+    shake256_inc_squeeze(sig, CTILDEBYTES, &state);
+    shake256_inc_ctx_release(&state);
+    PQCLEAN_MLDSA65_CLEAN_poly_challenge(&cp, sig);
+    PQCLEAN_MLDSA65_CLEAN_poly_ntt(&cp);
+
+    /* Compute z, reject if it reveals secret */
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_invntt_tomont(&z);
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_add(&z, &z, &y);
+    PQCLEAN_MLDSA65_CLEAN_polyvecl_reduce(&z);
+    if (PQCLEAN_MLDSA65_CLEAN_polyvecl_chknorm(&z, GAMMA1 - BETA)) {
+        goto rej;
+    }
+
+    /* Check that subtracting cs2 does not change high bits of w and low bits
+     * do not reveal secret information */
+    PQCLEAN_MLDSA65_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&h);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_sub(&w0, &w0, &h);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&w0);
+    if (PQCLEAN_MLDSA65_CLEAN_polyveck_chknorm(&w0, GAMMA2 - BETA)) {
+        goto rej;
+    }
+
+    /* Compute hints for w1 */
+    PQCLEAN_MLDSA65_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &t0);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_invntt_tomont(&h);
+    PQCLEAN_MLDSA65_CLEAN_polyveck_reduce(&h);
+    if (PQCLEAN_MLDSA65_CLEAN_polyveck_chknorm(&h, GAMMA2)) {
+        goto rej;
+    }
+
+    PQCLEAN_MLDSA65_CLEAN_polyveck_add(&w0, &w0, &h);
+    n = PQCLEAN_MLDSA65_CLEAN_polyveck_make_hint(&h, &w0, &w1);
+    if (n > OMEGA) {
+        goto rej;
+    }
+
+    /* Write signature */
+    PQCLEAN_MLDSA65_CLEAN_pack_sig(sig, sig, &z, &h);
+    *siglen = PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES;
+    return 0;
+}
+
+
+int PQCLEAN_MLDSA65_CLEAN_crypto_sign_ctx_KAT(uint8_t *sm,
+        size_t *smlen,
+        const uint8_t *m,
+        size_t mlen,
+        const uint8_t *ctx,
+        size_t ctxlen,
+        const uint8_t *sk,
+        uint8_t *rnd) {
+    int ret;
+    size_t i;
+
+    for (i = 0; i < mlen; ++i) {
+        sm[PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
+    }
+    ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature_ctx_KAT(sm, smlen, sm + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES, mlen, ctx, ctxlen, sk, rnd);
+    *smlen += mlen;
+    return ret;
+}
 
 
 
@@ -3345,23 +3345,23 @@ static bool parse_line(char* line, char* key, char* out) {
     return true;
 }
 
-void get_kat_parameter(FILE *in, uint8_t *out, uint64_t outlen)
+void get_kat_parameter(FILE *in, void *out, uint64_t outlen)
 {
-    int8_t* in_buf  = (int8_t*)malloc(sizeof(int8_t) * outlen * 2 + 10);
-    int8_t* out_buf = (int8_t*)malloc(sizeof(int8_t) * outlen * 2 + 10);
-    int8_t key[20];
+    uint8_t* in_buf  = (uint8_t*)malloc(sizeof(uint8_t) * outlen * 2 + 16);
+    uint8_t* out_buf = (uint8_t*)malloc(sizeof(uint8_t) * outlen * 2 + 16);
+    int8_t key[32];
 
-    fgets(in_buf, outlen * 2 + 10, in);
+    fgets(in_buf, outlen * 2 + 16, in);
     parse_line(in_buf, key, out_buf);
-    // if(strcmp(key, "count") == 0)
-    //     printf("%s\n", out_buf);
-    if (outlen < 3)
+    if (outlen < 6)
     {
-        sscanf(out_buf, "%hhu", out);
+        uint64_t v = 0;
+        v = strtoull(out_buf, NULL, 10);
+        memcpy(out, &v, sizeof(out));
     }
     else
     {
-        hex2bin(out_buf, out, outlen * 2);
+        hex2bin(out_buf, out, outlen);
     }
 
     free(in_buf);
@@ -3382,7 +3382,7 @@ int MLDSA_KAT_TEST_DET()
     uint8_t sk[PQCLEAN_MLDSA65_CLEAN_CRYPTO_SECRETKEYBYTES];
     uint8_t ctx[CTX_LEN];  //= {0x48, 0x0C, 0x65, 0x8C, 0x0C, 0xB3, 0xE0, 0x40, 0xBD, 0xE0, 0x84, 0x34, 0x5C, 0xEF, 0x0D, 0xF7};
 
-    uint8_t count_temp;
+    uint64_t count_temp;
     uint8_t xi[SEEDBYTES];
     uint8_t rng[RNDBYTES];
     uint8_t pk_temp[PQCLEAN_MLDSA65_CLEAN_CRYPTO_PUBLICKEYBYTES];
@@ -3522,7 +3522,7 @@ int MLDSA_KAT_TEST_HEDGED()
     uint8_t rng[RNDBYTES];
 
 
-    uint8_t count_temp;
+    uint64_t count_temp;
     uint8_t xi[SEEDBYTES];
     uint8_t pk_temp[PQCLEAN_MLDSA65_CLEAN_CRYPTO_PUBLICKEYBYTES];
     uint8_t sk_temp[PQCLEAN_MLDSA65_CLEAN_CRYPTO_SECRETKEYBYTES];

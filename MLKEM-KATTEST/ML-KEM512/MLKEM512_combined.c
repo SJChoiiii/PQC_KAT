@@ -1430,13 +1430,13 @@ static bool parse_line(char* line, char* key, char* out) {
 
 void get_kat_parameter(FILE *in, void *out, uint64_t outlen)
 {
-    uint8_t* in_buf  = (int8_t*)malloc(sizeof(int8_t) * outlen * 2 + 10);
-    uint8_t* out_buf = (int8_t*)malloc(sizeof(int8_t) * outlen * 2 + 10);
+    uint8_t* in_buf  = (uint8_t*)malloc(sizeof(uint8_t) * outlen * 2 + 16);
+    uint8_t* out_buf = (uint8_t*)malloc(sizeof(uint8_t) * outlen * 2 + 16);
     int8_t key[32];
 
-    fgets(in_buf, outlen * 2 + 10, in);
+    fgets(in_buf, outlen * 2 + 16, in);
     parse_line(in_buf, key, out_buf);
-    if (outlen < 5)
+    if (outlen < 6)
     {
         uint64_t v = 0;
         v = strtoull(out_buf, NULL, 10);
@@ -1444,7 +1444,7 @@ void get_kat_parameter(FILE *in, void *out, uint64_t outlen)
     }
     else
     {
-        hex2bin(out_buf, out, outlen * 2);
+        hex2bin(out_buf, out, outlen);
     }
 
     free(in_buf);
@@ -1488,7 +1488,7 @@ int TEST_KAT_MLKEM()
         uint8_t invalid_ct_temp[KYBER_CIPHERTEXTBYTES] = {0,};
         uint8_t invalid_ss_temp[32] = {0,};
 
-        get_kat_parameter(fp, &count, 4);
+        get_kat_parameter(fp, &count, 1);
         get_kat_parameter(fp, z_temp, 32);
         get_kat_parameter(fp, d_temp, 32);
         get_kat_parameter(fp, msg, 32);

@@ -1454,7 +1454,7 @@ void get_kat_parameter(FILE *in, void *out, uint64_t outlen)
 
     fgets(in_buf, outlen * 2 + 16, in);
     parse_line(in_buf, key, out_buf);
-    if (outlen < 6)
+    if (outlen < 3)
     {
         uint64_t v = 0;
         v = strtoull(out_buf, NULL, 10);
@@ -1507,7 +1507,7 @@ int TEST_KAT_MLKEM()
         uint8_t invalid_ct_temp[KYBER_CIPHERTEXTBYTES] = {0,};
         uint8_t invalid_ss_temp[32] = {0,};
 
-        get_kat_parameter(fp, &count, 5);
+        get_kat_parameter(fp, &count, 1);
         get_kat_parameter(fp, z_temp, 32);
         get_kat_parameter(fp, d_temp, 32);
         get_kat_parameter(fp, msg, 32);

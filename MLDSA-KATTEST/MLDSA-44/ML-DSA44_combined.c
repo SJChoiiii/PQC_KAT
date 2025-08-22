@@ -2726,7 +2726,8 @@ int PQCLEAN_MLDSA44_CLEAN_unpack_sig(uint8_t c[CTILDEBYTES],
     return 0;
 }
 
-int PQCLEAN_MLDSA44_CLEAN_crypto_sign_keypair_KAT(uint8_t *pk, uint8_t *sk, uint8_t *seed) {
+
+int PQCLEAN_MLDSA44_CLEAN_crypto_sign_keypair(uint8_t *pk, uint8_t *sk) {
     uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES];
     uint8_t tr[TRBYTES];                                                    // ! tr bit가 256 -> 512로 변경되었기 때문에 trbytes 새롭게 정의
     const uint8_t *rho, *rhoprime, *key;
@@ -2734,7 +2735,7 @@ int PQCLEAN_MLDSA44_CLEAN_crypto_sign_keypair_KAT(uint8_t *pk, uint8_t *sk, uint
     polyvecl s1, s1hat;
     polyveck s2, t1, t0;
 
-    memcpy(seedbuf, seed, SEEDBYTES);
+    randombytes_win32_randombytes(seedbuf, SEEDBYTES);
     seedbuf[SEEDBYTES + 0] = MLDSA44_K;                                     // ! seedbuf의 랜덤값 다음 1번째 를 MLDSA44_K
     seedbuf[SEEDBYTES + 1] = MLDSA44_L;                                     // ! seedbuf의 랜덤값 다음 2번째 를 L로 진행
     shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);    // ! 2개의 값을 추가했기 때문에 shake256의 inlen 부분에 + 2 를 추가
@@ -2887,6 +2888,171 @@ rej:
     return 0;
 }
 
+int PQCLEAN_MLDSA44_CLEAN_crypto_sign_ctx(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *sk) {
+    int ret;
+    size_t i;
+
+    for (i = 0; i < mlen; ++i) {
+        sm[PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
+    }
+    ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_signature_ctx(sm, smlen, sm + PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES, mlen, ctx, ctxlen, sk);
+    *smlen += mlen;
+    return ret;
+}
+
+int PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify_ctx(const uint8_t *sig, size_t siglen, const uint8_t *m, size_t mlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *pk) {
+    unsigned int i;                                                                             // ! ctx, ctxlen 추가
+    uint8_t buf[MLDSA44_K * POLYW1_PACKEDBYTES];
+    uint8_t rho[SEEDBYTES];
+    uint8_t mu[CRHBYTES];
+    uint8_t c[CTILDEBYTES];             // ! SEEDBTES -> CTILDEBYTES
+    uint8_t c2[CTILDEBYTES];            // ! SEEDBTES -> CTILDEBYTES
+    poly cp;
+    polyvecl mat[MLDSA44_K], z;
+    polyveck t1, w1, h;
+    shake256incctx state;
+
+    if (ctxlen > 255 || siglen != PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES) { // ! ctx의 길이 확인 추가
+        return -1;
+    }
+
+    PQCLEAN_MLDSA44_CLEAN_unpack_pk(rho, &t1, pk);
+
+    if (PQCLEAN_MLDSA44_CLEAN_unpack_sig(c, &z, &h, sig)) {
+        return -1;
+    }
+    if (PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm(&z, GAMMA1 - BETA)) {
+        return -1;
+    }
+
+    /* Compute CRH(H(rho, t1), msg) */
+    shake256(mu, TRBYTES, pk, PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES);     // ! SEEDBYTES -> TRBYTES       // tr = H( rho | pack(t1) )
+    shake256_inc_init(&state);
+    shake256_inc_absorb(&state, mu, TRBYTES);       // ! SEEDBYTES -> TRBYTES                                   // H( tr)
+    mu[0] = 0;                                      // ! mu의 맨 처음에 0을,
+    mu[1] = (uint8_t)ctxlen;                        // ! 그 다음에 ctx의 길이에 대한 정보를 넣어주고
+    shake256_inc_absorb(&state, mu, 2);             // ! H( tr | 0 | ctxlen )
+    shake256_inc_absorb(&state, ctx, ctxlen);       // ! H( tr | 0 | ctxlen | ctx )
+    shake256_inc_absorb(&state, m, mlen);           // ! // ! H( tr | 0 | ctxlen | ctx )
+    shake256_inc_finalize(&state);
+    shake256_inc_squeeze(mu, CRHBYTES, &state);     // ! mu = H( tr | 0 | ctxlen | ctx | m)
+    shake256_inc_ctx_release(&state);
+
+
+    /* Matrix-vector multiplication; compute Az - c * 2^d *t1 */
+    PQCLEAN_MLDSA44_CLEAN_poly_challenge(&cp, c);
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);
+
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&z);
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
+
+    PQCLEAN_MLDSA44_CLEAN_poly_ntt(&cp);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl(&t1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_ntt(&t1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&t1, &cp, &t1);
+
+    PQCLEAN_MLDSA44_CLEAN_polyveck_sub(&w1, &w1, &t1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&w1);
+
+    /* Reconstruct w1 */
+    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&w1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_use_hint(&w1, &w1, &h);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(buf, &w1);
+
+    /* Call random oracle and verify challenge */
+    shake256_inc_init(&state);
+    shake256_inc_absorb(&state, mu, CRHBYTES);
+    shake256_inc_absorb(&state, buf, MLDSA44_K * POLYW1_PACKEDBYTES);
+    shake256_inc_finalize(&state);
+    shake256_inc_squeeze(c2, CTILDEBYTES, &state);              // ! SEEDBYTES -> CTILDEBYTES
+    shake256_inc_ctx_release(&state);
+    
+
+    for (i = 0; i < CTILDEBYTES; ++i) {                         
+        if (c[i] != c2[i]) {                                    // ! SEEDBYTES -> CTILDEBYTES
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int PQCLEAN_MLDSA44_CLEAN_crypto_sign_open_ctx(uint8_t *m, size_t *mlen, const uint8_t *sm, size_t smlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *pk) {
+    size_t i;                                               // ! ctx, ctxlen 추가
+
+    if (smlen < PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES) {
+        goto badsig;
+    }
+
+    *mlen = smlen - PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES;
+    if (PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify_ctx(sm, PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES, sm + PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES, *mlen, ctx, ctxlen, pk)) {    // ! ctx, ctxlen 추가
+        goto badsig;
+    } else {
+        /* All good, copy msg, return 0 */
+        for (i = 0; i < *mlen; ++i) {
+            m[i] = sm[PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES + i];
+        }
+        return 0;
+    }
+
+badsig:
+    /* Signature verification failed */
+    *mlen = 0;  // ! -1 -> 0
+    for (i = 0; i < smlen; ++i) {
+        m[i] = 0;
+    }
+
+    return -1;
+}
+
+
+int PQCLEAN_MLDSA44_CLEAN_crypto_sign_keypair_KAT(uint8_t *pk, uint8_t *sk, uint8_t *seed) {
+    uint8_t seedbuf[2 * SEEDBYTES + CRHBYTES];
+    uint8_t tr[TRBYTES];                                                    // ! tr bit가 256 -> 512로 변경되었기 때문에 trbytes 새롭게 정의
+    const uint8_t *rho, *rhoprime, *key;
+    polyvecl mat[MLDSA44_K];
+    polyvecl s1, s1hat;
+    polyveck s2, t1, t0;
+
+    memcpy(seedbuf, seed, SEEDBYTES);
+    seedbuf[SEEDBYTES + 0] = MLDSA44_K;                                     // ! seedbuf의 랜덤값 다음 1번째 를 MLDSA44_K
+    seedbuf[SEEDBYTES + 1] = MLDSA44_L;                                     // ! seedbuf의 랜덤값 다음 2번째 를 L로 진행
+    shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);    // ! 2개의 값을 추가했기 때문에 shake256의 inlen 부분에 + 2 를 추가
+    
+    
+    rho = seedbuf;
+    rhoprime = rho + SEEDBYTES;
+    key = rhoprime + CRHBYTES;
+
+    /* Expand matrix */
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);
+
+    /* Sample short vectors s1 and s2 */
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_uniform_eta(&s1, rhoprime, 0);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_uniform_eta(&s2, rhoprime, MLDSA44_L);
+
+    /* Matrix-vector multiplication */
+    s1hat = s1;
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&s1hat);
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&t1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&t1);
+
+    /* Add error vector s2 */
+    PQCLEAN_MLDSA44_CLEAN_polyveck_add(&t1, &t1, &s2);
+
+    /* Extract t1 and write public key */
+    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&t1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_power2round(&t1, &t0, &t1);
+    PQCLEAN_MLDSA44_CLEAN_pack_pk(pk, rho, &t1);
+
+    /* Compute H(rho, t1) and write secret key */
+    shake256(tr, TRBYTES, pk, PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES);
+    PQCLEAN_MLDSA44_CLEAN_pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
+
+    return 0;
+}
 
 int PQCLEAN_MLDSA44_CLEAN_crypto_sign_signature_ctx_KAT(uint8_t *sig, size_t *siglen, const uint8_t *m, size_t mlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *sk, uint8_t *rng) {
     unsigned int n;
@@ -2998,19 +3164,6 @@ rej:
     return 0;
 }
 
-
-int PQCLEAN_MLDSA44_CLEAN_crypto_sign_ctx(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *sk) {
-    int ret;
-    size_t i;
-
-    for (i = 0; i < mlen; ++i) {
-        sm[PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
-    }
-    ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_signature_ctx(sm, smlen, sm + PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES, mlen, ctx, ctxlen, sk);
-    *smlen += mlen;
-    return ret;
-}
-
 int PQCLEAN_MLDSA44_CLEAN_crypto_sign_ctx_KAT(uint8_t *sm, size_t *smlen, const uint8_t *m, size_t mlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *sk, uint8_t *rnd) {
     int ret;
     size_t i;
@@ -3023,111 +3176,6 @@ int PQCLEAN_MLDSA44_CLEAN_crypto_sign_ctx_KAT(uint8_t *sm, size_t *smlen, const 
     return ret;
 }
 
-int PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify_ctx(const uint8_t *sig, size_t siglen, const uint8_t *m, size_t mlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *pk) {
-    unsigned int i;                                                                             // ! ctx, ctxlen 추가
-    uint8_t buf[MLDSA44_K * POLYW1_PACKEDBYTES];
-    uint8_t rho[SEEDBYTES];
-    uint8_t mu[CRHBYTES];
-    uint8_t c[CTILDEBYTES];             // ! SEEDBTES -> CTILDEBYTES
-    uint8_t c2[CTILDEBYTES];            // ! SEEDBTES -> CTILDEBYTES
-    poly cp;
-    polyvecl mat[MLDSA44_K], z;
-    polyveck t1, w1, h;
-    shake256incctx state;
-
-    if (ctxlen > 255 || siglen != PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES) { // ! ctx의 길이 확인 추가
-        return -1;
-    }
-
-    PQCLEAN_MLDSA44_CLEAN_unpack_pk(rho, &t1, pk);
-
-    if (PQCLEAN_MLDSA44_CLEAN_unpack_sig(c, &z, &h, sig)) {
-        return -1;
-    }
-    if (PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm(&z, GAMMA1 - BETA)) {
-        return -1;
-    }
-
-    /* Compute CRH(H(rho, t1), msg) */
-    shake256(mu, TRBYTES, pk, PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES);     // ! SEEDBYTES -> TRBYTES       // tr = H( rho | pack(t1) )
-    shake256_inc_init(&state);
-    shake256_inc_absorb(&state, mu, TRBYTES);       // ! SEEDBYTES -> TRBYTES                                   // H( tr)
-    mu[0] = 0;                                      // ! mu의 맨 처음에 0을,
-    mu[1] = (uint8_t)ctxlen;                        // ! 그 다음에 ctx의 길이에 대한 정보를 넣어주고
-    shake256_inc_absorb(&state, mu, 2);             // ! H( tr | 0 | ctxlen )
-    shake256_inc_absorb(&state, ctx, ctxlen);       // ! H( tr | 0 | ctxlen | ctx )
-    shake256_inc_absorb(&state, m, mlen);           // ! // ! H( tr | 0 | ctxlen | ctx )
-    shake256_inc_finalize(&state);
-    shake256_inc_squeeze(mu, CRHBYTES, &state);     // ! mu = H( tr | 0 | ctxlen | ctx | m)
-    shake256_inc_ctx_release(&state);
-
-
-    /* Matrix-vector multiplication; compute Az - c * 2^d *t1 */
-    PQCLEAN_MLDSA44_CLEAN_poly_challenge(&cp, c);
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);
-
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&z);
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
-
-    PQCLEAN_MLDSA44_CLEAN_poly_ntt(&cp);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl(&t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_ntt(&t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&t1, &cp, &t1);
-
-    PQCLEAN_MLDSA44_CLEAN_polyveck_sub(&w1, &w1, &t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&w1);
-
-    /* Reconstruct w1 */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_use_hint(&w1, &w1, &h);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(buf, &w1);
-
-    /* Call random oracle and verify challenge */
-    shake256_inc_init(&state);
-    shake256_inc_absorb(&state, mu, CRHBYTES);
-    shake256_inc_absorb(&state, buf, MLDSA44_K * POLYW1_PACKEDBYTES);
-    shake256_inc_finalize(&state);
-    shake256_inc_squeeze(c2, CTILDEBYTES, &state);              // ! SEEDBYTES -> CTILDEBYTES
-    shake256_inc_ctx_release(&state);
-    
-
-    for (i = 0; i < CTILDEBYTES; ++i) {                         
-        if (c[i] != c2[i]) {                                    // ! SEEDBYTES -> CTILDEBYTES
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-int PQCLEAN_MLDSA44_CLEAN_crypto_sign_open_ctx(uint8_t *m, size_t *mlen, const uint8_t *sm, size_t smlen, const uint8_t *ctx, size_t ctxlen, const uint8_t *pk) {
-    size_t i;                                               // ! ctx, ctxlen 추가
-
-    if (smlen < PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES) {
-        goto badsig;
-    }
-
-    *mlen = smlen - PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES;
-    if (PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify_ctx(sm, PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES, sm + PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES, *mlen, ctx, ctxlen, pk)) {    // ! ctx, ctxlen 추가
-        goto badsig;
-    } else {
-        /* All good, copy msg, return 0 */
-        for (i = 0; i < *mlen; ++i) {
-            m[i] = sm[PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES + i];
-        }
-        return 0;
-    }
-
-badsig:
-    /* Signature verification failed */
-    *mlen = 0;  // ! -1 -> 0
-    for (i = 0; i < smlen; ++i) {
-        m[i] = 0;
-    }
-
-    return -1;
-}
 
 #include <stdbool.h>
 
@@ -3169,23 +3217,23 @@ static bool parse_line(char* line, char* key, char* out) {
     return true;
 }
 
-void get_kat_parameter(FILE *in, uint8_t *out, uint64_t outlen)
+void get_kat_parameter(FILE *in, void *out, uint64_t outlen)
 {
-    int8_t* in_buf  = (int8_t*)malloc(sizeof(int8_t) * outlen * 2 + 10);
-    int8_t* out_buf = (int8_t*)malloc(sizeof(int8_t) * outlen * 2 + 10);
-    int8_t key[20];
+    uint8_t* in_buf  = (uint8_t*)malloc(sizeof(uint8_t) * outlen * 2 + 16);
+    uint8_t* out_buf = (uint8_t*)malloc(sizeof(uint8_t) * outlen * 2 + 16);
+    int8_t key[32];
 
-    fgets(in_buf, outlen * 2 + 10, in);
+    fgets(in_buf, outlen * 2 + 16, in);
     parse_line(in_buf, key, out_buf);
-    // if(strcmp(key, "count") == 0)
-    //     printf("%s\n", out_buf);
-    if (outlen < 3)
+    if (outlen < 6)
     {
-        sscanf(out_buf, "%hhu", out);
+        uint64_t v = 0;
+        v = strtoull(out_buf, NULL, 10);
+        memcpy(out, &v, sizeof(out));
     }
     else
     {
-        hex2bin(out_buf, out, outlen * 2);
+        hex2bin(out_buf, out, outlen);
     }
 
     free(in_buf);
@@ -3206,7 +3254,7 @@ int MLDSA_KAT_TEST_DET()
     uint8_t sk[PQCLEAN_MLDSA44_CLEAN_CRYPTO_SECRETKEYBYTES];
     uint8_t ctx[CTX_LEN];  //= {0x48, 0x0C, 0x65, 0x8C, 0x0C, 0xB3, 0xE0, 0x40, 0xBD, 0xE0, 0x84, 0x34, 0x5C, 0xEF, 0x0D, 0xF7};
 
-    uint8_t count_temp;
+    uint64_t count_temp;
     uint8_t xi[SEEDBYTES];
     uint8_t rng[RNDBYTES];
     uint8_t pk_temp[PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES];
@@ -3311,7 +3359,7 @@ int MLDSA_KAT_TEST_HEDGED()
     uint8_t rng[RNDBYTES];
 
 
-    uint8_t count_temp;
+    uint64_t count_temp;
     uint8_t xi[SEEDBYTES];
     uint8_t pk_temp[PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES];
     uint8_t sk_temp[PQCLEAN_MLDSA44_CLEAN_CRYPTO_SECRETKEYBYTES];
