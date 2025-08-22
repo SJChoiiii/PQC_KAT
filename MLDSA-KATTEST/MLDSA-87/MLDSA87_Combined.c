@@ -1736,7 +1736,7 @@ void PQCLEAN_MLDSA87_CLEAN_poly_challenge(poly *c, const uint8_t seed[CTILDEBYTE
     }
     shake256_inc_ctx_release(&state);
 }
- 
+
 /*************************************************
 * Name:        PQCLEAN_MLDSA87_CLEAN_polyeta_pack
 *
