@@ -1224,16 +1224,6 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair(uint8_t *pk, uint8_t *sk)
     return 0;
 }
 
-int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_KAT(uint8_t *pk, uint8_t *sk, uint8_t *d, uint8_t* z) 
-{
-    uint8_t coins[2 * KYBER_SYMBYTES];          // random 값 저장하기 위한 coin값 추가
-    //randombytes(coins, 2 * KYBER_SYMBYTES);     // random 값 생성 d -> A 행렬 생성 seed, s 행렬 생성 seed 를 생성하는 seed, z -> implicit rejection을 위한 random 값
-    memcpy(coins, d, 32);
-    memcpy(coins + 32, z, 32);
-    PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(pk, sk, coins);    // ML-KEM internal 함수 호출
-    return 0;
-}
-
 int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk, const uint8_t *coins) 
 {
     uint8_t buf[2 * KYBER_SYMBYTES];
@@ -1266,14 +1256,6 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_
     return 0;
 }
 
-int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_KAT(uint8_t *ct, uint8_t *ss, const uint8_t *pk, uint8_t *ssk_seed) 
-{
-    uint8_t coins[KYBER_SYMBYTES];
-    //randombytes(coins, KYBER_SYMBYTES); // SSK seed 값 생성
-    memcpy(coins, ssk_seed, KYBER_SYMBYTES);
-    PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(ct, ss, pk, coins);
-    return 0;
-}
 
 int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) 
 {
@@ -1310,6 +1292,25 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const 
     return 0;
 }
 
+
+int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_KAT(uint8_t *pk, uint8_t *sk, uint8_t *d, uint8_t* z) 
+{
+    uint8_t coins[2 * KYBER_SYMBYTES];          // random 값 저장하기 위한 coin값 추가
+    //randombytes(coins, 2 * KYBER_SYMBYTES);     // random 값 생성 d -> A 행렬 생성 seed, s 행렬 생성 seed 를 생성하는 seed, z -> implicit rejection을 위한 random 값
+    memcpy(coins, d, 32);
+    memcpy(coins + 32, z, 32);
+    PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(pk, sk, coins);    // ML-KEM internal 함수 호출
+    return 0;
+}
+
+int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_KAT(uint8_t *ct, uint8_t *ss, const uint8_t *pk, uint8_t *ssk_seed) 
+{
+    uint8_t coins[KYBER_SYMBYTES];
+    //randombytes(coins, KYBER_SYMBYTES); // SSK seed 값 생성
+    memcpy(coins, ssk_seed, KYBER_SYMBYTES);
+    PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(ct, ss, pk, coins);
+    return 0;
+}
 
 int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec_KAT(uint8_t *ss, const uint8_t *ct, const uint8_t *sk, uint8_t *invalid_ct, uint8_t *invalid_ss) 
 {
