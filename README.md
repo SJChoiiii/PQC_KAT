@@ -4,6 +4,6 @@
 
 **BOLD** is complete
 
-사용한 test vector url: "https://github.com/post-quantum-cryptography/KAT"
+test vector url: "https://github.com/post-quantum-cryptography/KAT"
 
 이후 SMAUG-T에 대한 KAT역시 진행할 예정.
