@@ -3375,9 +3375,9 @@ int MLDSA_KAT_TEST_DET()
     int ret;
     size_t mlen, smlen;
     uint8_t b;
-    uint8_t *m;  //[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES]; //= {0x6D, 0xBB, 0xC4, 0x37, 0x51, 0x36, 0xDF, 0x3B, 0x07, 0xF7, 0xC7, 0x0E, 0x63, 0x9E, 0x22, 0x3E};    // 실제         message
+    uint8_t *m;  //[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];   // 실제         message
     uint8_t *m2; //[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];   // verify에 있는 message
-    uint8_t *sm;//[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];   // sign에 있는  message
+    uint8_t *sm;//[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];    // sign에 있는  message
     uint8_t pk[PQCLEAN_MLDSA65_CLEAN_CRYPTO_PUBLICKEYBYTES];
     uint8_t sk[PQCLEAN_MLDSA65_CLEAN_CRYPTO_SECRETKEYBYTES];
     uint8_t ctx[CTX_LEN];  //= {0x48, 0x0C, 0x65, 0x8C, 0x0C, 0xB3, 0xE0, 0x40, 0xBD, 0xE0, 0x84, 0x34, 0x5C, 0xEF, 0x0D, 0xF7};
@@ -3513,9 +3513,9 @@ int MLDSA_KAT_TEST_HEDGED()
     int ret;
     size_t mlen, smlen;
     uint8_t b;
-    uint8_t *m;  //[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES]; //= {0x6D, 0xBB, 0xC4, 0x37, 0x51, 0x36, 0xDF, 0x3B, 0x07, 0xF7, 0xC7, 0x0E, 0x63, 0x9E, 0x22, 0x3E};    // 실제         message
+    uint8_t *m;  //[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];   // 실제         message
     uint8_t *m2; //[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];   // verify에 있는 message
-    uint8_t *sm;//[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];   // sign에 있는  message
+    uint8_t *sm;//[MLEN + PQCLEAN_MLDSA65_CLEAN_CRYPTO_BYTES];    // sign에 있는  message
     uint8_t pk[PQCLEAN_MLDSA65_CLEAN_CRYPTO_PUBLICKEYBYTES];
     uint8_t sk[PQCLEAN_MLDSA65_CLEAN_CRYPTO_SECRETKEYBYTES];
     uint8_t ctx[CTX_LEN];  //= {0x48, 0x0C, 0x65, 0x8C, 0x0C, 0xB3, 0xE0, 0x40, 0xBD, 0xE0, 0x84, 0x34, 0x5C, 0xEF, 0x0D, 0xF7};

@@ -25,7 +25,7 @@
 
 #define XOF_BLOCKBYTES SHAKE128_RATE
 
-// 컴파일러가 0 또는 1 값을 추론하여 분기문을 사용하지 않도록 방지하기 위한 목적으로 추가된 코드
+// ! 컴파일러가 0 또는 1 값을 추론하여 분기문을 사용하지 않도록 방지하기 위한 목적으로 추가된 코드
 #define PQCLEAN_PREVENT_BRANCH_HACK(b)  __asm__("" : "+r"(b) : /* no inputs */);
 
 #define randombytes(OUT, OUTLEN) rand2(OUT, OUTLEN)
@@ -76,7 +76,7 @@ void PQCLEAN_MLKEM512_CLEAN_cmov(uint8_t *r, const uint8_t *x, size_t len, uint8
 
     // 함수의 입력에서 b = 1 - fail 이므로 c = c' 인 경우  b = 1, 아니라면 b = 0 가 됨
 
-    // 컴파일러가 0 또는 1 값을 추론하여 분기문을 사용하지 않도록 방지하기 위한 목적으로 추가된 코드
+    // ! 컴파일러가 0 또는 1 값을 추론하여 분기문을 사용하지 않도록 방지하기 위한 목적으로 추가된 코드
     // 브랜치 예측 공격을 방지하려는 최적화 기법으로, 분기 예측을 방지하고, 연산을 더 안정적으로 수행하려는 목적입니다.
     //PQCLEAN_PREVENT_BRANCH_HACK(b);
 
@@ -1106,10 +1106,10 @@ void PQCLEAN_MLKEM512_CLEAN_indcpa_keypair_derand(uint8_t pk[KYBER_INDCPA_PUBLIC
     uint8_t nonce = 0;
     polyvec a[KYBER_K], e, pkpv, skpv;
 
-    memcpy(buf, coins, KYBER_SYMBYTES);     // Kyber에서는 indcpa_keypair부분에서 random값을 생성했지만, ML-KEM에서는 이전에 coin값에 random값을 넣어놓고 그대로 사용함
+    memcpy(buf, coins, KYBER_SYMBYTES);     // ! Kyber에서는 indcpa_keypair부분에서 random값을 생성했지만, ML-KEM에서는 이전에 coin값에 random값을 넣어놓고 그대로 사용함
                                             // A 행렬 생성 seed, noise seed의 seed임
 
-    buf[KYBER_SYMBYTES] = KYBER_K;          // Kyber에서는 buf[0~31]까지만 채우고 G함수를 이용 but ML-KEM에서는 buf[32]에 Kyber_K값을 넣어주고
+    buf[KYBER_SYMBYTES] = KYBER_K;          // ! Kyber에서는 buf[0~31]까지만 채우고 G함수를 이용 but ML-KEM에서는 buf[32]에 Kyber_K값을 넣어주고
     
     hash_g(buf, buf, KYBER_SYMBYTES + 1);   // 32개의 값을 G함수에 넣는게 아니라 33개의 값을 G 함수에 넣어서 이용함
                                             // G 함수(SHA3_512)로 랜덤값을 Seed로 만들어줌 -> SHA3_512의 앞 32byte를 공개키의 seed값, 뒤 32byte를 noise의 seed값 으로 사용
@@ -1218,9 +1218,9 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, c
 }
 int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair(uint8_t *pk, uint8_t *sk) 
 {
-    uint8_t coins[2 * KYBER_SYMBYTES];          // random 값 저장하기 위한 coin값 추가
+    uint8_t coins[2 * KYBER_SYMBYTES];          // ! random 값 저장하기 위한 coin값 추가
     randombytes(coins, 2 * KYBER_SYMBYTES);     // random 값 생성 d -> A 행렬 생성 seed, s 행렬 생성 seed 를 생성하는 seed, z -> implicit rejection을 위한 random 값
-    PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(pk, sk, coins);    // ML-KEM internal 함수 호출
+    PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(pk, sk, coins);    // ! ML-KEM internal 함수 호출
     return 0;
 }
 
@@ -1232,8 +1232,8 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const
 
     memcpy(buf, coins, KYBER_SYMBYTES);
 
-    // H(m)하는 ssk의 seed의 seed를 통해 ssk seed를 생성하는 과정이 사라짐
-    // 즉, ssk의 seed는 random값 그대로임
+    // ! H(m)하는 ssk의 seed의 seed를 통해 ssk seed를 생성하는 과정이 사라짐
+    // ! 즉, ssk의 seed는 random값 그대로임
 
     
     /* Multitarget countermeasure for coins + contributory KEM */
@@ -1243,7 +1243,7 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const
     /* coins are in kr+KYBER_SYMBYTES */
     PQCLEAN_MLKEM512_CLEAN_indcpa_enc(ct, buf, pk, kr + KYBER_SYMBYTES); // ciphertext 생성, buf : ssk seed || H(pk),  pk : t || a seed,  kr + 32 : r = G(H(pk))
 
-    // ciphertext의 해시값을 생성하여 KDF를 이용해 ssk를 뽑아내는 과정 삭제
+    // ! ciphertext의 해시값을 생성하여 KDF를 이용해 ssk를 뽑아내는 과정 삭제
 
     memcpy(ss, kr, KYBER_SYMBYTES); // ss에 ssk 저장
     return 0;
@@ -1251,7 +1251,7 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const
 int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) 
 {
     uint8_t coins[KYBER_SYMBYTES];
-    randombytes(coins, KYBER_SYMBYTES); // SSK seed 값 생성
+    randombytes(coins, KYBER_SYMBYTES); // ! SSK seed 값 생성
     PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(ct, ss, pk, coins);
     return 0;
 }
@@ -1263,7 +1263,7 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const 
     uint8_t buf[2 * KYBER_SYMBYTES];
     /* Will contain key, coins */
     uint8_t kr[2 * KYBER_SYMBYTES];
-    uint8_t cmp[KYBER_CIPHERTEXTBYTES + KYBER_SYMBYTES];    // cmp에 하위 32byte가 추가로 생김 -> 이거 왜 생김 쓸모가 없는디
+    uint8_t cmp[KYBER_CIPHERTEXTBYTES + KYBER_SYMBYTES];    // ! cmp에 하위 32byte가 추가로 생김 -> 이거 왜 생김 쓸모가 없는디
     const uint8_t *pk = sk + KYBER_INDCPA_SECRETKEYBYTES;   
 
 

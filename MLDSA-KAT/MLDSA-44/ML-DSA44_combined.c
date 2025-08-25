@@ -149,15 +149,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyt1_pack(uint8_t *r, const poly *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyt1_unpack
-*
-* Description: Unpack polynomial t1 with 10-bit coefficients.
-*              Output coefficients are standard representatives.
-*
-* Arguments:   - poly *r: pointer to output polynomial
-*              - const uint8_t *a: byte array with bit-packed polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyt1_unpack(poly *r, const uint8_t *a) {
     unsigned int i;
     DBENCH_START();
@@ -172,15 +163,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyt1_unpack(poly *r, const uint8_t *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyt0_pack
-*
-* Description: Bit-pack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
-*
-* Arguments:   - uint8_t *r: pointer to output byte array with at least
-*                            POLYT0_PACKEDBYTES bytes
-*              - const poly *a: pointer to input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyt0_pack(uint8_t *r, const poly *a) {
     unsigned int i;
     uint32_t t[8];
@@ -221,14 +203,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyt0_pack(uint8_t *r, const poly *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyt0_unpack
-*
-* Description: Unpack polynomial t0 with coefficients in ]-2^{D-1}, 2^{D-1}].
-*
-* Arguments:   - poly *r: pointer to output polynomial
-*              - const uint8_t *a: byte array with bit-packed polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyt0_unpack(poly *r, const uint8_t *a) {
     unsigned int i;
     DBENCH_START();
@@ -283,16 +257,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyt0_unpack(poly *r, const uint8_t *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyz_pack
-*
-* Description: Bit-pack polynomial with coefficients
-*              in [-(GAMMA1 - 1), GAMMA1].
-*
-* Arguments:   - uint8_t *r: pointer to output byte array with at least
-*                            POLYZ_PACKEDBYTES bytes
-*              - const poly *a: pointer to input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyz_pack(uint8_t *r, const poly *a) {
     unsigned int i;
     uint32_t t[4];
@@ -321,15 +285,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyz_pack(uint8_t *r, const poly *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyz_unpack
-*
-* Description: Unpack polynomial z with coefficients
-*              in [-(GAMMA1 - 1), GAMMA1].
-*
-* Arguments:   - poly *r: pointer to output polynomial
-*              - const uint8_t *a: byte array with bit-packed polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyz_unpack(poly *r, const uint8_t *a) {
     unsigned int i;
     DBENCH_START();
@@ -364,15 +319,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyz_unpack(poly *r, const uint8_t *a) {
     DBENCH_STOP(*tpack);
 }
 
-/*************************************************
- * Name:        load64
- *
- * Description: Load 8 bytes into uint64_t in little-endian order
- *
- * Arguments:   - const uint8_t *x: pointer to input byte array
- *
- * Returns the loaded 64-bit unsigned integer
- **************************************************/
 static uint64_t load64(const uint8_t *x) {
     uint64_t r = 0;
     for (size_t i = 0; i < 8; ++i) {
@@ -382,14 +328,6 @@ static uint64_t load64(const uint8_t *x) {
     return r;
 }
 
-/*************************************************
- * Name:        store64
- *
- * Description: Store a 64-bit integer to a byte array in little-endian order
- *
- * Arguments:   - uint8_t *x: pointer to the output byte array
- *              - uint64_t u: input 64-bit unsigned integer
- **************************************************/
 static void store64(uint8_t *x, uint64_t u) {
     for (size_t i = 0; i < 8; ++i) {
         x[i] = (uint8_t) (u >> 8 * i);
@@ -412,13 +350,6 @@ static const uint64_t KeccakF_RoundConstants[NROUNDS] = {
     0x0000000080000001ULL, 0x8000000080008008ULL
 };
 
-/*************************************************
- * Name:        KeccakF1600_StatePermute
- *
- * Description: The Keccak F1600 Permutation
- *
- * Arguments:   - uint64_t *state: pointer to input/output Keccak state
- **************************************************/
 static void KeccakF1600_StatePermute(uint64_t *state) {
     int round;
 
@@ -682,19 +613,6 @@ static void KeccakF1600_StatePermute(uint64_t *state) {
     state[24] = Asu;
 }
 
-/*************************************************
- * Name:        keccak_absorb
- *
- * Description: Absorb step of Keccak;
- *              non-incremental, starts by zeroeing the state.
- *
- * Arguments:   - uint64_t *s: pointer to (uninitialized) output Keccak state
- *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
- *              - const uint8_t *m: pointer to input to be absorbed into s
- *              - size_t mlen: length of input in bytes
- *              - uint8_t p: domain-separation byte for different
- *                                 Keccak-derived functions
- **************************************************/
 static void keccak_absorb(uint64_t *s, uint32_t r, const uint8_t *m,
                           size_t mlen, uint8_t p) {
     size_t i;
@@ -728,19 +646,6 @@ static void keccak_absorb(uint64_t *s, uint32_t r, const uint8_t *m,
     }
 }
 
-/*************************************************
- * Name:        keccak_squeezeblocks
- *
- * Description: Squeeze step of Keccak. Squeezes full blocks of r bytes each.
- *              Modifies the state. Can be called multiple times to keep
- *              squeezing, i.e., is incremental.
- *
- * Arguments:   - uint8_t *h: pointer to output blocks
- *              - size_t nblocks: number of blocks to be
- *                                                squeezed (written to h)
- *              - uint64_t *s: pointer to input/output Keccak state
- *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
- **************************************************/
 static void keccak_squeezeblocks(uint8_t *h, size_t nblocks,
                                  uint64_t *s, uint32_t r) {
     while (nblocks > 0) {
@@ -753,16 +658,6 @@ static void keccak_squeezeblocks(uint8_t *h, size_t nblocks,
     }
 }
 
-/*************************************************
- * Name:        keccak_inc_init
- *
- * Description: Initializes the incremental Keccak state to zero.
- *
- * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
- *                First 25 values represent Keccak state.
- *                26th value represents either the number of absorbed bytes
- *                that have not been permuted, or not-yet-squeezed bytes.
- **************************************************/
 static void keccak_inc_init(uint64_t *s_inc) {
     size_t i;
 
@@ -772,20 +667,6 @@ static void keccak_inc_init(uint64_t *s_inc) {
     s_inc[25] = 0;
 }
 
-/*************************************************
- * Name:        keccak_inc_absorb
- *
- * Description: Incremental keccak absorb
- *              Preceded by keccak_inc_init, succeeded by keccak_inc_finalize
- *
- * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
- *                First 25 values represent Keccak state.
- *                26th value represents either the number of absorbed bytes
- *                that have not been permuted, or not-yet-squeezed bytes.
- *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
- *              - const uint8_t *m: pointer to input to be absorbed into s
- *              - size_t mlen: length of input in bytes
- **************************************************/
 static void keccak_inc_absorb(uint64_t *s_inc, uint32_t r, const uint8_t *m,
                               size_t mlen) {
     size_t i;
@@ -810,19 +691,6 @@ static void keccak_inc_absorb(uint64_t *s_inc, uint32_t r, const uint8_t *m,
     s_inc[25] += mlen;
 }
 
-/*************************************************
- * Name:        keccak_inc_finalize
- *
- * Description: Finalizes Keccak absorb phase, prepares for squeezing
- *
- * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
- *                First 25 values represent Keccak state.
- *                26th value represents either the number of absorbed bytes
- *                that have not been permuted, or not-yet-squeezed bytes.
- *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
- *              - uint8_t p: domain-separation byte for different
- *                                 Keccak-derived functions
- **************************************************/
 static void keccak_inc_finalize(uint64_t *s_inc, uint32_t r, uint8_t p) {
     /* After keccak_inc_absorb, we are guaranteed that s_inc[25] < r,
        so we can always use one more byte for p in the current state. */
@@ -831,19 +699,6 @@ static void keccak_inc_finalize(uint64_t *s_inc, uint32_t r, uint8_t p) {
     s_inc[25] = 0;
 }
 
-/*************************************************
- * Name:        keccak_inc_squeeze
- *
- * Description: Incremental Keccak squeeze; can be called on byte-level
- *
- * Arguments:   - uint8_t *h: pointer to output bytes
- *              - size_t outlen: number of bytes to be squeezed
- *              - uint64_t *s_inc: pointer to input/output incremental state
- *                First 25 values represent Keccak state.
- *                26th value represents either the number of absorbed bytes
- *                that have not been permuted, or not-yet-squeezed bytes.
- *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
- **************************************************/
 static void keccak_inc_squeeze(uint8_t *h, size_t outlen,
                                uint64_t *s_inc, uint32_t r) {
     size_t i;
@@ -935,17 +790,6 @@ void shake256_inc_ctx_release(shake256incctx *state) {
     free(state->ctx);
 }
 
-/*************************************************
- * Name:        shake128_absorb
- *
- * Description: Absorb step of the SHAKE128 XOF.
- *              non-incremental, starts by zeroeing the state.
- *
- * Arguments:   - uint64_t *s: pointer to (uninitialized) output Keccak state
- *              - const uint8_t *input: pointer to input to be absorbed
- *                                            into s
- *              - size_t inlen: length of input in bytes
- **************************************************/
 void shake128_absorb(shake128ctx *state, const uint8_t *input, size_t inlen) {
     state->ctx = malloc(PQC_SHAKECTX_BYTES);
     if (state->ctx == NULL) {
@@ -954,18 +798,6 @@ void shake128_absorb(shake128ctx *state, const uint8_t *input, size_t inlen) {
     keccak_absorb(state->ctx, SHAKE128_RATE, input, inlen, 0x1F);
 }
 
-/*************************************************
- * Name:        shake128_squeezeblocks
- *
- * Description: Squeeze step of SHAKE128 XOF. Squeezes full blocks of
- *              SHAKE128_RATE bytes each. Modifies the state. Can be called
- *              multiple times to keep squeezing, i.e., is incremental.
- *
- * Arguments:   - uint8_t *output: pointer to output blocks
- *              - size_t nblocks: number of blocks to be squeezed
- *                                            (written to output)
- *              - shake128ctx *state: pointer to input/output Keccak state
- **************************************************/
 void shake128_squeezeblocks(uint8_t *output, size_t nblocks, shake128ctx *state) {
     keccak_squeezeblocks(output, nblocks, state->ctx, SHAKE128_RATE);
 }
@@ -983,17 +815,6 @@ void shake128_ctx_release(shake128ctx *state) {
     free(state->ctx);
 }
 
-/*************************************************
- * Name:        shake256_absorb
- *
- * Description: Absorb step of the SHAKE256 XOF.
- *              non-incremental, starts by zeroeing the state.
- *
- * Arguments:   - shake256ctx *state: pointer to (uninitialized) output Keccak state
- *              - const uint8_t *input: pointer to input to be absorbed
- *                                            into s
- *              - size_t inlen: length of input in bytes
- **************************************************/
 void shake256_absorb(shake256ctx *state, const uint8_t *input, size_t inlen) {
     state->ctx = malloc(PQC_SHAKECTX_BYTES);
     if (state->ctx == NULL) {
@@ -1002,34 +823,12 @@ void shake256_absorb(shake256ctx *state, const uint8_t *input, size_t inlen) {
     keccak_absorb(state->ctx, SHAKE256_RATE, input, inlen, 0x1F);
 }
 
-/*************************************************
- * Name:        shake256_squeezeblocks
- *
- * Description: Squeeze step of SHAKE256 XOF. Squeezes full blocks of
- *              SHAKE256_RATE bytes each. Modifies the state. Can be called
- *              multiple times to keep squeezing, i.e., is incremental.
- *
- * Arguments:   - uint8_t *output: pointer to output blocks
- *              - size_t nblocks: number of blocks to be squeezed
- *                                (written to output)
- *              - shake256ctx *state: pointer to input/output Keccak state
- **************************************************/
 void shake256_squeezeblocks(uint8_t *output, size_t nblocks, shake256ctx *state) {
     keccak_squeezeblocks(output, nblocks, state->ctx, SHAKE256_RATE);
 }
 
 
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_montgomery_reduce
-*
-* Description: For finite field element a with -2^{31}Q <= a <= Q*2^31,
-*              compute r \equiv a*2^{-32} (mod Q) such that -Q < r < Q.
-*
-* Arguments:   - int64_t: finite field element a
-*
-* Returns r.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_montgomery_reduce(int64_t a) {
     int32_t t;
 
@@ -1038,16 +837,6 @@ int32_t PQCLEAN_MLDSA44_CLEAN_montgomery_reduce(int64_t a) {
     return t;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_reduce32
-*
-* Description: For finite field element a with a <= 2^{31} - 2^{22} - 1,
-*              compute r \equiv a (mod Q) such that -6283008 <= r <= 6283008.
-*
-* Arguments:   - int32_t: finite field element a
-*
-* Returns r.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_reduce32(int32_t a) {
     int32_t t;
 
@@ -1056,30 +845,11 @@ int32_t PQCLEAN_MLDSA44_CLEAN_reduce32(int32_t a) {
     return t;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_caddq
-*
-* Description: Add Q if input coefficient is negative.
-*
-* Arguments:   - int32_t: finite field element a
-*
-* Returns r.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_caddq(int32_t a) {
     a += (a >> 31) & Q;
     return a;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_freeze
-*
-* Description: For finite field element a, compute standard
-*              representative r = a mod^+ Q.
-*
-* Arguments:   - int32_t: finite field element a
-*
-* Returns r.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_freeze(int32_t a) {
     a = PQCLEAN_MLDSA44_CLEAN_reduce32(a);
     a = PQCLEAN_MLDSA44_CLEAN_caddq(a);
@@ -1094,21 +864,10 @@ void shake256_ctx_clone(shake256ctx *dest, const shake256ctx *src) {
     memcpy(dest->ctx, src->ctx, PQC_SHAKECTX_BYTES);
 }
 
-/** Release the allocated state. Call only once. */
 void shake256_ctx_release(shake256ctx *state) {
     free(state->ctx);
 }
 
-/*************************************************
- * Name:        shake128
- *
- * Description: SHAKE128 XOF with non-incremental API
- *
- * Arguments:   - uint8_t *output: pointer to output
- *              - size_t outlen: requested output length in bytes
- *              - const uint8_t *input: pointer to input
- *              - size_t inlen: length of input in bytes
- **************************************************/
 void shake128(uint8_t *output, size_t outlen,
               const uint8_t *input, size_t inlen) {
     size_t nblocks = outlen / SHAKE128_RATE;
@@ -1130,16 +889,6 @@ void shake128(uint8_t *output, size_t outlen,
     shake128_ctx_release(&s);
 }
 
-/*************************************************
- * Name:        shake256
- *
- * Description: SHAKE256 XOF with non-incremental API
- *
- * Arguments:   - uint8_t *output: pointer to output
- *              - size_t outlen: requested output length in bytes
- *              - const uint8_t *input: pointer to input
- *              - size_t inlen: length of input in bytes
- **************************************************/
 void shake256(uint8_t *output, size_t outlen,
               const uint8_t *input, size_t inlen) {
     size_t nblocks = outlen / SHAKE256_RATE;
@@ -1198,15 +947,6 @@ void sha3_256_inc_finalize(uint8_t *output, sha3_256incctx *state) {
     }
 }
 
-/*************************************************
- * Name:        sha3_256
- *
- * Description: SHA3-256 with non-incremental API
- *
- * Arguments:   - uint8_t *output:      pointer to output
- *              - const uint8_t *input: pointer to input
- *              - size_t inlen:   length of input in bytes
- **************************************************/
 void sha3_256(uint8_t *output, const uint8_t *input, size_t inlen) {
     uint64_t s[25];
     uint8_t t[SHA3_256_RATE];
@@ -1259,15 +999,6 @@ void sha3_384_inc_finalize(uint8_t *output, sha3_384incctx *state) {
     }
 }
 
-/*************************************************
- * Name:        sha3_384
- *
- * Description: SHA3-256 with non-incremental API
- *
- * Arguments:   - uint8_t *output:      pointer to output
- *              - const uint8_t *input: pointer to input
- *              - size_t inlen:   length of input in bytes
- **************************************************/
 void sha3_384(uint8_t *output, const uint8_t *input, size_t inlen) {
     uint64_t s[25];
     uint8_t t[SHA3_384_RATE];
@@ -1320,15 +1051,6 @@ void sha3_512_inc_finalize(uint8_t *output, sha3_512incctx *state) {
     }
 }
 
-/*************************************************
- * Name:        sha3_512
- *
- * Description: SHA3-512 with non-incremental API
- *
- * Arguments:   - uint8_t *output:      pointer to output
- *              - const uint8_t *input: pointer to input
- *              - size_t inlen:   length of input in bytes
- **************************************************/
 void sha3_512(uint8_t *output, const uint8_t *input, size_t inlen) {
     uint64_t s[25];
     uint8_t t[SHA3_512_RATE];
@@ -1355,14 +1077,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_reduce(poly *a) {
     DBENCH_STOP(*tred);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_caddq
-*
-* Description: For all coefficients of in/out polynomial add Q if
-*              coefficient is negative.
-*
-* Arguments:   - poly *a: pointer to input/output polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_caddq(poly *a) {
     unsigned int i;
     DBENCH_START();
@@ -1374,15 +1088,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_caddq(poly *a) {
     DBENCH_STOP(*tred);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_add
-*
-* Description: Add polynomials. No modular reduction is performed.
-*
-* Arguments:   - poly *c: pointer to output polynomial
-*              - const poly *a: pointer to first summand
-*              - const poly *b: pointer to second summand
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_add(poly *c, const poly *a, const poly *b)  {
     unsigned int i;
     DBENCH_START();
@@ -1394,17 +1099,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_add(poly *c, const poly *a, const poly *b)  {
     DBENCH_STOP(*tadd);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_sub
-*
-* Description: Subtract polynomials. No modular reduction is
-*              performed.
-*
-* Arguments:   - poly *c: pointer to output polynomial
-*              - const poly *a: pointer to first input polynomial
-*              - const poly *b: pointer to second input polynomial to be
-*                               subtraced from first input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_sub(poly *c, const poly *a, const poly *b) {
     unsigned int i;
     DBENCH_START();
@@ -1416,15 +1110,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_sub(poly *c, const poly *a, const poly *b) {
     DBENCH_STOP(*tadd);
 }
 
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_ntt
-*
-* Description: Forward NTT, in-place. No modular reduction is performed after
-*              additions or subtractions. Output vector is in bitreversed order.
-*
-* Arguments:   - uint32_t p[MLDSA44_N]: input/output coefficient array
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_ntt(int32_t a[MLDSA44_N]) {
     unsigned int len, start, j, k;
     int32_t zeta, t;
@@ -1442,17 +1127,6 @@ void PQCLEAN_MLDSA44_CLEAN_ntt(int32_t a[MLDSA44_N]) {
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_invntt_tomont
-*
-* Description: Inverse NTT and multiplication by Montgomery factor 2^32.
-*              In-place. No modular reductions after additions or
-*              subtractions; input coefficients need to be smaller than
-*              Q in absolute value. Output coefficient are smaller than Q in
-*              absolute value.
-*
-* Arguments:   - uint32_t p[MLDSA44_N]: input/output coefficient array
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_invntt_tomont(int32_t a[MLDSA44_N]) {
     unsigned int start, len, j, k;
     int32_t t, zeta;
@@ -1476,20 +1150,6 @@ void PQCLEAN_MLDSA44_CLEAN_invntt_tomont(int32_t a[MLDSA44_N]) {
     }
 }
 
-
-
-
-
-
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_shiftl
-*
-* Description: Multiply polynomial by 2^D without modular reduction. Assumes
-*              input coefficients to be less than 2^{31-D} in absolute value.
-*
-* Arguments:   - poly *a: pointer to input/output polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_shiftl(poly *a) {
     unsigned int i;
     DBENCH_START();
@@ -1501,14 +1161,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_shiftl(poly *a) {
     DBENCH_STOP(*tmul);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_ntt
-*
-* Description: Inplace forward NTT. Coefficients can grow by
-*              8*Q in absolute value.
-*
-* Arguments:   - poly *a: pointer to input/output polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_ntt(poly *a) {
     DBENCH_START();
 
@@ -1517,15 +1169,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_ntt(poly *a) {
     DBENCH_STOP(*tmul);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_invntt_tomont
-*
-* Description: Inplace inverse NTT and multiplication by 2^{32}.
-*              Input coefficients need to be less than Q in absolute
-*              value and output coefficients are again bounded by Q.
-*
-* Arguments:   - poly *a: pointer to input/output polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_invntt_tomont(poly *a) {
     DBENCH_START();
 
@@ -1534,19 +1177,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_invntt_tomont(poly *a) {
     DBENCH_STOP(*tmul);
 }
 
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_power2round
-*
-* Description: For finite field element a, compute a0, a1 such that
-*              a mod^+ Q = a1*2^D + a0 with -2^{D-1} < a0 <= 2^{D-1}.
-*              Assumes a to be standard representative.
-*
-* Arguments:   - int32_t a: input element
-*              - int32_t *a0: pointer to output element a0
-*
-* Returns a1.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_power2round(int32_t *a0, int32_t a)  {
     int32_t a1;
 
@@ -1555,20 +1185,6 @@ int32_t PQCLEAN_MLDSA44_CLEAN_power2round(int32_t *a0, int32_t a)  {
     return a1;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_decompose
-*
-* Description: For finite field element a, compute high and low bits a0, a1 such
-*              that a mod^+ Q = a1*ALPHA + a0 with -ALPHA/2 < a0 <= ALPHA/2 except
-*              if a1 = (Q-1)/ALPHA where we set a1 = 0 and
-*              -ALPHA/2 <= a0 = a mod^+ Q - Q < 0. Assumes a to be standard
-*              representative.
-*
-* Arguments:   - int32_t a: input element
-*              - int32_t *a0: pointer to output element a0
-*
-* Returns a1.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_decompose(int32_t *a0, int32_t a) {
     int32_t a1;
 
@@ -1581,17 +1197,6 @@ int32_t PQCLEAN_MLDSA44_CLEAN_decompose(int32_t *a0, int32_t a) {
     return a1;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_make_hint
-*
-* Description: Compute hint bit indicating whether the low bits of the
-*              input element overflow into the high bits.
-*
-* Arguments:   - int32_t a0: low bits of input element
-*              - int32_t a1: high bits of input element
-*
-* Returns 1 if overflow.
-**************************************************/
 unsigned int PQCLEAN_MLDSA44_CLEAN_make_hint(int32_t a0, int32_t a1) {
     if (a0 > GAMMA2 || a0 < -GAMMA2 || (a0 == -GAMMA2 && a1 != 0)) {
         return 1;
@@ -1600,16 +1205,6 @@ unsigned int PQCLEAN_MLDSA44_CLEAN_make_hint(int32_t a0, int32_t a1) {
     return 0;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_use_hint
-*
-* Description: Correct high bits according to hint.
-*
-* Arguments:   - int32_t a: input element
-*              - unsigned int hint: hint bit
-*
-* Returns corrected high bits.
-**************************************************/
 int32_t PQCLEAN_MLDSA44_CLEAN_use_hint(int32_t a, unsigned int hint) {
     int32_t a0, a1;
 
@@ -1630,19 +1225,6 @@ int32_t PQCLEAN_MLDSA44_CLEAN_use_hint(int32_t a, unsigned int hint) {
     return a1 - 1;
 }
 
-
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_pointwise_montgomery
-*
-* Description: Pointwise multiplication of polynomials in NTT domain
-*              representation and multiplication of resulting polynomial
-*              by 2^{-32}.
-*
-* Arguments:   - poly *c: pointer to output polynomial
-*              - const poly *a: pointer to first input polynomial
-*              - const poly *b: pointer to second input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
     unsigned int i;
     DBENCH_START();
@@ -1654,18 +1236,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_pointwise_montgomery(poly *c, const poly *a, con
     DBENCH_STOP(*tmul);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_power2round
-*
-* Description: For all coefficients c of the input polynomial,
-*              compute c0, c1 such that c mod Q = c1*2^D + c0
-*              with -2^{D-1} < c0 <= 2^{D-1}. Assumes coefficients to be
-*              standard representatives.
-*
-* Arguments:   - poly *a1: pointer to output polynomial with coefficients c1
-*              - poly *a0: pointer to output polynomial with coefficients c0
-*              - const poly *a: pointer to input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_power2round(poly *a1, poly *a0, const poly *a) {
     unsigned int i;
     DBENCH_START();
@@ -1677,19 +1247,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_power2round(poly *a1, poly *a0, const poly *a) {
     DBENCH_STOP(*tround);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_decompose
-*
-* Description: For all coefficients c of the input polynomial,
-*              compute high and low bits c0, c1 such c mod Q = c1*ALPHA + c0
-*              with -ALPHA/2 < c0 <= ALPHA/2 except c1 = (Q-1)/ALPHA where we
-*              set c1 = 0 and -ALPHA/2 <= c0 = c mod Q - Q < 0.
-*              Assumes coefficients to be standard representatives.
-*
-* Arguments:   - poly *a1: pointer to output polynomial with coefficients c1
-*              - poly *a0: pointer to output polynomial with coefficients c0
-*              - const poly *a: pointer to input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_decompose(poly *a1, poly *a0, const poly *a) {
     unsigned int i;
     DBENCH_START();
@@ -1701,21 +1258,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_decompose(poly *a1, poly *a0, const poly *a) {
     DBENCH_STOP(*tround);
 }
 
-
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_make_hint
-*
-* Description: Compute hint polynomial. The coefficients of which indicate
-*              whether the low bits of the corresponding coefficient of
-*              the input polynomial overflow into the high bits.
-*
-* Arguments:   - poly *h: pointer to output hint polynomial
-*              - const poly *a0: pointer to low part of input polynomial
-*              - const poly *a1: pointer to high part of input polynomial
-*
-* Returns number of 1 bits.
-**************************************************/
 unsigned int PQCLEAN_MLDSA44_CLEAN_poly_make_hint(poly *h, const poly *a0, const poly *a1) {
     unsigned int i, s = 0;
     DBENCH_START();
@@ -1729,15 +1271,7 @@ unsigned int PQCLEAN_MLDSA44_CLEAN_poly_make_hint(poly *h, const poly *a0, const
     return s;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_use_hint
-*
-* Description: Use hint polynomial to correct the high bits of a polynomial.
-*
-* Arguments:   - poly *b: pointer to output polynomial with corrected high bits
-*              - const poly *a: pointer to input polynomial
-*              - const poly *h: pointer to input hint polynomial
-**************************************************/
+
 void PQCLEAN_MLDSA44_CLEAN_poly_use_hint(poly *b, const poly *a, const poly *h) {
     unsigned int i;
     DBENCH_START();
@@ -1749,17 +1283,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_use_hint(poly *b, const poly *a, const poly *h) 
     DBENCH_STOP(*tround);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_chknorm
-*
-* Description: Check infinity norm of polynomial against given bound.
-*              Assumes input coefficients were reduced by PQCLEAN_MLDSA44_CLEAN_reduce32().
-*
-* Arguments:   - const poly *a: pointer to polynomial
-*              - int32_t B: norm bound
-*
-* Returns 0 if norm is strictly smaller than B <= (Q-1)/8 and 1 otherwise.
-**************************************************/
 int PQCLEAN_MLDSA44_CLEAN_poly_chknorm(const poly *a, int32_t B) {
     unsigned int i;
     int32_t t;
@@ -1809,21 +1332,6 @@ void PQCLEAN_MLDSA44_CLEAN_dilithium_shake256_stream_init(shake256incctx *state,
     shake256_inc_finalize(state);
 }
 
-
-/*************************************************
-* Name:        rej_uniform
-*
-* Description: Sample uniformly random coefficients in [0, Q-1] by
-*              performing rejection sampling on array of random bytes.
-*
-* Arguments:   - int32_t *a: pointer to output array (allocated)
-*              - unsigned int len: number of coefficients to be sampled
-*              - const uint8_t *buf: array of random bytes
-*              - unsigned int buflen: length of array of random bytes
-*
-* Returns number of sampled coefficients. Can be smaller than len if not enough
-* random bytes were given.
-**************************************************/
 static unsigned int rej_uniform(int32_t *a,
                                 unsigned int len,
                                 const uint8_t *buf,
@@ -1848,18 +1356,6 @@ static unsigned int rej_uniform(int32_t *a,
     return ctr;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_uniform
-*
-* Description: Sample polynomial with uniformly random coefficients
-*              in [0,Q-1] by performing rejection sampling on the
-*              output stream of SHAKE128(seed|nonce)
-*
-* Arguments:   - poly *a: pointer to output polynomial
-*              - const uint8_t seed[]: byte array with seed of length SEEDBYTES
-*              - uint16_t nonce: 2-byte nonce
-**************************************************/
-#define POLY_UNIFORM_NBLOCKS ((768 + STREAM128_BLOCKBYTES - 1)/STREAM128_BLOCKBYTES)
 void PQCLEAN_MLDSA44_CLEAN_poly_uniform(poly *a,
                                         const uint8_t seed[SEEDBYTES],
                                         uint16_t nonce) {
@@ -1885,21 +1381,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_uniform(poly *a,
     }
     stream128_release(&state);
 }
-
-/*************************************************
-* Name:        rej_eta
-*
-* Description: Sample uniformly random coefficients in [-ETA, ETA] by
-*              performing rejection sampling on array of random bytes.
-*
-* Arguments:   - int32_t *a: pointer to output array (allocated)
-*              - unsigned int len: number of coefficients to be sampled
-*              - const uint8_t *buf: array of random bytes
-*              - unsigned int buflen: length of array of random bytes
-*
-* Returns number of sampled coefficients. Can be smaller than len if not enough
-* random bytes were given.
-**************************************************/
 static unsigned int rej_eta(int32_t *a,
                             unsigned int len,
                             const uint8_t *buf,
@@ -1927,18 +1408,6 @@ static unsigned int rej_eta(int32_t *a,
     return ctr;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_poly_uniform_eta
-*
-* Description: Sample polynomial with uniformly random coefficients
-*              in [-ETA,ETA] by performing rejection sampling on the
-*              output stream from SHAKE256(seed|nonce)
-*
-* Arguments:   - poly *a: pointer to output polynomial
-*              - const uint8_t seed[]: byte array with seed of length CRHBYTES
-*              - uint16_t nonce: 2-byte nonce
-**************************************************/
-#define POLY_UNIFORM_ETA_NBLOCKS ((136 + STREAM256_BLOCKBYTES - 1)/STREAM256_BLOCKBYTES)
 void PQCLEAN_MLDSA44_CLEAN_poly_uniform_eta(poly *a,
         const uint8_t seed[CRHBYTES],
         uint16_t nonce) {
@@ -1959,18 +1428,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_uniform_eta(poly *a,
     stream256_release(&state);
 }
 
-/*************************************************
-* Name:        poly_uniform_gamma1m1
-*
-* Description: Sample polynomial with uniformly random coefficients
-*              in [-(GAMMA1 - 1), GAMMA1] by unpacking output stream
-*              of SHAKE256(seed|nonce)
-*
-* Arguments:   - poly *a: pointer to output polynomial
-*              - const uint8_t seed[]: byte array with seed of length CRHBYTES
-*              - uint16_t nonce: 16-bit nonce
-**************************************************/
-#define POLY_UNIFORM_GAMMA1_NBLOCKS ((POLYZ_PACKEDBYTES + STREAM256_BLOCKBYTES - 1)/STREAM256_BLOCKBYTES)
 void PQCLEAN_MLDSA44_CLEAN_poly_uniform_gamma1(poly *a,
         const uint8_t seed[CRHBYTES],
         uint16_t nonce) {
@@ -1983,16 +1440,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_uniform_gamma1(poly *a,
     PQCLEAN_MLDSA44_CLEAN_polyz_unpack(a, buf);
 }
 
-/*************************************************
-* Name:        challenge
-*
-* Description: Implementation of H. Samples polynomial with TAU nonzero
-*              coefficients in {-1,1} using the output stream of
-*              SHAKE256(seed).
-*
-* Arguments:   - poly *c: pointer to output polynomial
-*              - const uint8_t mu[]: byte array containing seed of length CTILDEBYTES
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_poly_challenge(poly *c, const uint8_t seed[CTILDEBYTES]) {
     unsigned int i, b, pos;
     uint64_t signs;
@@ -2030,27 +1477,6 @@ void PQCLEAN_MLDSA44_CLEAN_poly_challenge(poly *c, const uint8_t seed[CTILDEBYTE
     shake256_inc_ctx_release(&state);
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyeta_pack
-*
-* Description: Bit-pack polynomial with coefficients in [-ETA,ETA].
-*
-* Arguments:   - uint8_t *r: pointer to output byte array with at least
-*                            POLYETA_PACKEDBYTES bytes
-*              - const poly *a: pointer to input polynomial
-**************************************************/
-
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyw1_pack
-*
-* Description: Bit-pack polynomial w1 with coefficients in [0,15] or [0,43].
-*              Input coefficients are assumed to be standard representatives.
-*
-* Arguments:   - uint8_t *r: pointer to output byte array with at least
-*                            POLYW1_PACKEDBYTES bytes
-*              - const poly *a: pointer to input polynomial
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyw1_pack(uint8_t *r, const poly *a) {
     unsigned int i;
     DBENCH_START();
@@ -2099,10 +1525,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(polyveck *t, cons
     }
 }
 
-/**************************************************************/
-/************ Vectors of polynomials of length MLDSA44_L **************/
-/**************************************************************/
-
 void PQCLEAN_MLDSA44_CLEAN_polyvecl_uniform_eta(polyvecl *v, const uint8_t seed[CRHBYTES], uint16_t nonce) {
     unsigned int i;
 
@@ -2127,16 +1549,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyvecl_reduce(polyvecl *v) {
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyvecl_add
-*
-* Description: Add vectors of polynomials of length MLDSA44_L.
-*              No modular reduction is performed.
-*
-* Arguments:   - polyvecl *w: pointer to output vector
-*              - const polyvecl *u: pointer to first summand
-*              - const polyvecl *v: pointer to second summand
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyvecl_add(polyvecl *w, const polyvecl *u, const polyvecl *v) {
     unsigned int i;
 
@@ -2145,14 +1557,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyvecl_add(polyvecl *w, const polyvecl *u, const po
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt
-*
-* Description: Forward NTT of all polynomials in vector of length MLDSA44_L. Output
-*              coefficients can be up to 16*Q larger than input coefficients.
-*
-* Arguments:   - polyvecl *v: pointer to input/output vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(polyvecl *v) {
     unsigned int i;
 
@@ -2177,30 +1581,7 @@ void PQCLEAN_MLDSA44_CLEAN_polyvecl_pointwise_poly_montgomery(polyvecl *r, const
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyvecl_pointwise_acc_montgomery
-*
-* Description: Pointwise multiply vectors of polynomials of length MLDSA44_L, multiply
-*              resulting vector by 2^{-32} and add (accumulate) polynomials
-*              in it. Input/output vectors are in NTT domain representation.
-*
-* Arguments:   - poly *w: output polynomial
-*              - const polyvecl *u: pointer to first input vector
-*              - const polyvecl *v: pointer to second input vector
-**************************************************/ 
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm
-*
-* Description: Check infinity norm of polynomials in vector of length MLDSA44_L.
-*              Assumes input polyvecl to be reduced by PQCLEAN_MLDSA44_CLEAN_polyvecl_reduce().
-*
-* Arguments:   - const polyvecl *v: pointer to vector
-*              - int32_t B: norm bound
-*
-* Returns 0 if norm of all polynomials is strictly smaller than B <= (Q-1)/8
-* and 1 otherwise.
-**************************************************/
 int PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm(const polyvecl *v, int32_t bound)  {
     unsigned int i;
 
@@ -2213,10 +1594,6 @@ int PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm(const polyvecl *v, int32_t bound)  {
     return 0;
 }
 
-/**************************************************************/
-/************ Vectors of polynomials of length MLDSA44_K **************/
-/**************************************************************/
-
 void PQCLEAN_MLDSA44_CLEAN_polyveck_uniform_eta(polyveck *v, const uint8_t seed[CRHBYTES], uint16_t nonce) {
     unsigned int i;
 
@@ -2225,14 +1602,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_uniform_eta(polyveck *v, const uint8_t seed[
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_reduce
-*
-* Description: Reduce coefficients of polynomials in vector of length MLDSA44_K
-*              to representatives in [-6283008,6283008].
-*
-* Arguments:   - polyveck *v: pointer to input/output vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(polyveck *v) {
     unsigned int i;
 
@@ -2241,14 +1610,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(polyveck *v) {
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_caddq
-*
-* Description: For all coefficients of polynomials in vector of length MLDSA44_K
-*              add Q if coefficient is negative.
-*
-* Arguments:   - polyveck *v: pointer to input/output vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(polyveck *v) {
     unsigned int i;
 
@@ -2257,16 +1618,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(polyveck *v) {
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_add
-*
-* Description: Add vectors of polynomials of length MLDSA44_K.
-*              No modular reduction is performed.
-*
-* Arguments:   - polyveck *w: pointer to output vector
-*              - const polyveck *u: pointer to first summand
-*              - const polyveck *v: pointer to second summand
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_add(polyveck *w, const polyveck *u, const polyveck *v) {
     unsigned int i;
 
@@ -2275,17 +1626,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_add(polyveck *w, const polyveck *u, const po
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_sub
-*
-* Description: Subtract vectors of polynomials of length MLDSA44_K.
-*              No modular reduction is performed.
-*
-* Arguments:   - polyveck *w: pointer to output vector
-*              - const polyveck *u: pointer to first input vector
-*              - const polyveck *v: pointer to second input vector to be
-*                                   subtracted from first input vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_sub(polyveck *w, const polyveck *u, const polyveck *v) {
     unsigned int i;
 
@@ -2294,14 +1634,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_sub(polyveck *w, const polyveck *u, const po
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl
-*
-* Description: Multiply vector of polynomials of Length MLDSA44_K by 2^D without modular
-*              reduction. Assumes input coefficients to be less than 2^{31-D}.
-*
-* Arguments:   - polyveck *v: pointer to input/output vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl(polyveck *v) {
     unsigned int i;
 
@@ -2310,14 +1642,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl(polyveck *v) {
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_ntt
-*
-* Description: Forward NTT of all polynomials in vector of length MLDSA44_K. Output
-*              coefficients can be up to 16*Q larger than input coefficients.
-*
-* Arguments:   - polyveck *v: pointer to input/output vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_ntt(polyveck *v) {
     unsigned int i;
 
@@ -2326,15 +1650,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_ntt(polyveck *v) {
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont
-*
-* Description: Inverse NTT and multiplication by 2^{32} of polynomials
-*              in vector of length MLDSA44_K. Input coefficients need to be less
-*              than 2*Q.
-*
-* Arguments:   - polyveck *v: pointer to input/output vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(polyveck *v) {
     unsigned int i;
 
@@ -2351,19 +1666,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(polyveck *r, const
     }
 }
 
-
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm
-*
-* Description: Check infinity norm of polynomials in vector of length MLDSA44_K.
-*              Assumes input polyveck to be reduced by PQCLEAN_MLDSA44_CLEAN_polyveck_reduce().
-*
-* Arguments:   - const polyveck *v: pointer to vector
-*              - int32_t B: norm bound
-*
-* Returns 0 if norm of all polynomials are strictly smaller than B <= (Q-1)/8
-* and 1 otherwise.
-**************************************************/
 int PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm(const polyveck *v, int32_t bound) {
     unsigned int i;
 
@@ -2376,20 +1678,6 @@ int PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm(const polyveck *v, int32_t bound) {
     return 0;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_power2round
-*
-* Description: For all coefficients a of polynomials in vector of length MLDSA44_K,
-*              compute a0, a1 such that a mod^+ Q = a1*2^D + a0
-*              with -2^{D-1} < a0 <= 2^{D-1}. Assumes coefficients to be
-*              standard representatives.
-*
-* Arguments:   - polyveck *v1: pointer to output vector of polynomials with
-*                              coefficients a1
-*              - polyveck *v0: pointer to output vector of polynomials with
-*                              coefficients a0
-*              - const polyveck *v: pointer to input vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_power2round(polyveck *v1, polyveck *v0, const polyveck *v) {
     unsigned int i;
 
@@ -2398,21 +1686,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_power2round(polyveck *v1, polyveck *v0, cons
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_decompose
-*
-* Description: For all coefficients a of polynomials in vector of length MLDSA44_K,
-*              compute high and low bits a0, a1 such a mod^+ Q = a1*ALPHA + a0
-*              with -ALPHA/2 < a0 <= ALPHA/2 except a1 = (Q-1)/ALPHA where we
-*              set a1 = 0 and -ALPHA/2 <= a0 = a mod Q - Q < 0.
-*              Assumes coefficients to be standard representatives.
-*
-* Arguments:   - polyveck *v1: pointer to output vector of polynomials with
-*                              coefficients a1
-*              - polyveck *v0: pointer to output vector of polynomials with
-*                              coefficients a0
-*              - const polyveck *v: pointer to input vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_decompose(polyveck *v1, polyveck *v0, const polyveck *v) {
     unsigned int i;
 
@@ -2421,17 +1694,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_decompose(polyveck *v1, polyveck *v0, const 
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint
-*
-* Description: Compute hint vector.
-*
-* Arguments:   - polyveck *h: pointer to output vector
-*              - const polyveck *v0: pointer to low part of input vector
-*              - const polyveck *v1: pointer to high part of input vector
-*
-* Returns number of 1 bits.
-**************************************************/
 unsigned int PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint(polyveck *h,
         const polyveck *v0,
         const polyveck *v1) {
@@ -2444,16 +1706,6 @@ unsigned int PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint(polyveck *h,
     return s;
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_polyveck_use_hint
-*
-* Description: Use hint vector to correct the high bits of input vector.
-*
-* Arguments:   - polyveck *w: pointer to output vector of polynomials with
-*                             corrected high bits
-*              - const polyveck *u: pointer to input vector
-*              - const polyveck *h: pointer to input hint vector
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_polyveck_use_hint(polyveck *w, const polyveck *v, const polyveck *h) {
     unsigned int i;
 
@@ -2470,15 +1722,6 @@ void PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(uint8_t r[MLDSA44_K * POLYW1_PACKEDB
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_pack_pk
-*
-* Description: Bit-pack public key pk = (rho, t1).
-*
-* Arguments:   - uint8_t pk[]: output byte array
-*              - const uint8_t rho[]: byte array containing rho
-*              - const polyveck *t1: pointer to vector t1
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_pack_pk(uint8_t pk[PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES],
                                    const uint8_t rho[SEEDBYTES],
                                    const polyveck *t1) {
@@ -2494,15 +1737,6 @@ void PQCLEAN_MLDSA44_CLEAN_pack_pk(uint8_t pk[PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLI
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_unpack_pk
-*
-* Description: Unpack public key pk = (rho, t1).
-*
-* Arguments:   - const uint8_t rho[]: output byte array for rho
-*              - const polyveck *t1: pointer to output vector t1
-*              - uint8_t pk[]: byte array containing bit-packed pk
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_unpack_pk(uint8_t rho[SEEDBYTES],
                                      polyveck *t1,
                                      const uint8_t pk[PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES]) {
@@ -2518,19 +1752,6 @@ void PQCLEAN_MLDSA44_CLEAN_unpack_pk(uint8_t rho[SEEDBYTES],
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_pack_sk
-*
-* Description: Bit-pack secret key sk = (rho, tr, key, t0, s1, s2).
-*
-* Arguments:   - uint8_t sk[]: output byte array
-*              - const uint8_t rho[]: byte array containing rho
-*              - const uint8_t tr[]: byte array containing tr
-*              - const uint8_t key[]: byte array containing key
-*              - const polyveck *t0: pointer to vector t0
-*              - const polyvecl *s1: pointer to vector s1
-*              - const polyveck *s2: pointer to vector s2
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_pack_sk(uint8_t sk[PQCLEAN_MLDSA44_CLEAN_CRYPTO_SECRETKEYBYTES],
                                    const uint8_t rho[SEEDBYTES],
                                    const uint8_t tr[TRBYTES],
@@ -2570,19 +1791,6 @@ void PQCLEAN_MLDSA44_CLEAN_pack_sk(uint8_t sk[PQCLEAN_MLDSA44_CLEAN_CRYPTO_SECRE
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_unpack_sk
-*
-* Description: Unpack secret key sk = (rho, tr, key, t0, s1, s2).
-*
-* Arguments:   - const uint8_t rho[]: output byte array for rho
-*              - const uint8_t tr[]: output byte array for tr
-*              - const uint8_t key[]: output byte array for key
-*              - const polyveck *t0: pointer to output vector t0
-*              - const polyvecl *s1: pointer to output vector s1
-*              - const polyveck *s2: pointer to output vector s2
-*              - uint8_t sk[]: byte array containing bit-packed sk
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_unpack_sk(uint8_t rho[SEEDBYTES],
                                      uint8_t tr[TRBYTES],
                                      uint8_t key[SEEDBYTES],
@@ -2622,16 +1830,6 @@ void PQCLEAN_MLDSA44_CLEAN_unpack_sk(uint8_t rho[SEEDBYTES],
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_pack_sig
-*
-* Description: Bit-pack signature sig = (c, z, h).
-*
-* Arguments:   - uint8_t sig[]: output byte array
-*              - const uint8_t *c: pointer to challenge hash length SEEDBYTES
-*              - const polyvecl *z: pointer to vector z
-*              - const polyveck *h: pointer to hint vector h
-**************************************************/
 void PQCLEAN_MLDSA44_CLEAN_pack_sig(uint8_t sig[PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES],
                                     const uint8_t c[CTILDEBYTES],
                                     const polyvecl *z,
@@ -2665,19 +1863,6 @@ void PQCLEAN_MLDSA44_CLEAN_pack_sig(uint8_t sig[PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYT
     }
 }
 
-/*************************************************
-* Name:        PQCLEAN_MLDSA44_CLEAN_unpack_sig
-*
-* Description: Unpack signature sig = (c, z, h).
-*
-* Arguments:   - uint8_t *c: pointer to output challenge hash
-*              - polyvecl *z: pointer to output vector z
-*              - polyveck *h: pointer to output hint vector h
-*              - const uint8_t sig[]: byte array containing
-*                bit-packed signature
-*
-* Returns 1 in case of malformed signature; otherwise 0.
-**************************************************/
 int PQCLEAN_MLDSA44_CLEAN_unpack_sig(uint8_t c[CTILDEBYTES],
                                      polyvecl *z,
                                      polyveck *h,

@@ -662,7 +662,7 @@ static void cbd3(poly *r, const uint8_t buf[3 * KYBER_N / 4]) {
 }
 
 void PQCLEAN_MLKEM1024_CLEAN_poly_cbd_eta1(poly *r, const uint8_t buf[KYBER_ETA1 * KYBER_N / 4]) {
-    cbd2(r, buf);   // ! ML-DSA512 와 다른 부분
+    cbd2(r, buf);   // ! ML-KEM512 와 다른 부분
 }
 void PQCLEAN_MLKEM1024_CLEAN_poly_cbd_eta2(poly *r, const uint8_t buf[KYBER_ETA2 * KYBER_N / 4]) {
     cbd2(r, buf);
