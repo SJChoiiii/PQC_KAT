@@ -1198,31 +1198,36 @@ int32_t PQCLEAN_MLDSA44_CLEAN_decompose(int32_t *a0, int32_t a) {
 }
 
 unsigned int PQCLEAN_MLDSA44_CLEAN_make_hint(int32_t a0, int32_t a1) {
-    if (a0 > GAMMA2 || a0 < -GAMMA2 || (a0 == -GAMMA2 && a1 != 0)) {
-        return 1;
-    }
-
+    if (a0 > GAMMA2 || a0 < -GAMMA2 || (a0 == -GAMMA2 && a1 != 0)) {    // 현재 LowBits(w - cs2) = w0 - cs < GAMMA2 - BETA 인데, BETA보다 작은 ct0를 더했을 때
+        return 1;                                                       // 해당 값이 +GAMMA2보다 크거나, -GAMMA2보다 작으면 -> HighBits의 값이 1 변경되었다는 의미임 
+    }                                                                   // 또한 기존의 decompose 에서는 w0 = (-gamma2, gamma2] 의 범위를 갖게 됨
+                                                                        // 그렇다면, w0 - cs2 + ct0 = gamma2일때 -> carry 발생x,
+                                                                        //                         = -gamma2일때 -> 일반적인 경우에는 a1 = a1 - 1로  carry를 발생시키는 것으로 hint 생성을 진행할 수 있음
+                                                                        // 하지만, a1 == 0, a0 == -gamma2 일 때의 계산은 q - gamma2가 되고, 이는 44 * 2 * gamma2 - gamma2 + 1의 값이 나오기 때문에 해당하는 부분만을 제외하고 hint를 생성해야 함
+                                                                        // 숫자로 적자면, 기존 decompose에서는 [0, g2] , [g2+1, 3g2] , ... , [85g2+1, 87g2] , [87g2+1, 88g2] 로 a1의 값이 각 0~44 인데,
+                                                                        // 실제로는 a1 = 44 일 때 a1 = 0으로 변경하는데, 여기에서 0 != 88g2 ( 0 - 1 = 88g2 ) 이기 때문에 이 decompose의 경우
+                                                                        // a1 == 0 일 때는 a0의 범위가 예외적으로 [-GAMMA2, GAMMA2]가 되기 때문에 예외처리를 진행해준 것임
     return 0;
 }
 
 int32_t PQCLEAN_MLDSA44_CLEAN_use_hint(int32_t a, unsigned int hint) {
     int32_t a0, a1;
 
-    a1 = PQCLEAN_MLDSA44_CLEAN_decompose(&a0, a);
+    a1 = PQCLEAN_MLDSA44_CLEAN_decompose(&a0, a);   // Az - ct1*2^d = w - cs2 + ct0 와 w - cs2를 비교하기 위해서 w - cs2 + ct0에 대한 decompose 진행
     if (hint == 0) {
         return a1;
     }
-
-    if (a0 > 0) {
-        if (a1 == 43) {
+                                                    // hint = 1 일때
+    if (a0 > 0) {                                   // a0 > 0       w - cs2 에서 ct0를 더했을 때 a1의 값이 하나 줄어들었다는 의미
+        if (a1 == 43) {                             // 줄어든 a1의 값이 43이라는건, 원래는 0이었다는 의미이므로 return 0
             return 0;
         }
-        return a1 + 1;
+        return a1 + 1;                              // 그게 아니라면 a1 = a1 + 1
     }
-    if (a1 == 0) {
+    if (a1 == 0) {                                  // a0 < 0 일 때, a1 == 0이라는 의미는 a1의 값이 43이었다는 의미이므로 return 43
         return 43;
     }
-    return a1 - 1;
+    return a1 - 1;                                  // 그게 아니라면 a1 = a1 - 1
 }
 
 void PQCLEAN_MLDSA44_CLEAN_poly_pointwise_montgomery(poly *c, const poly *a, const poly *b) {
@@ -2206,36 +2211,36 @@ int PQCLEAN_MLDSA44_CLEAN_crypto_sign_keypair_KAT(uint8_t *pk, uint8_t *sk, uint
     shake256(seedbuf, 2 * SEEDBYTES + CRHBYTES, seedbuf, SEEDBYTES + 2);    // ! 2개의 값을 추가했기 때문에 shake256의 inlen 부분에 + 2 를 추가
     
     
-    rho = seedbuf;
-    rhoprime = rho + SEEDBYTES;
-    key = rhoprime + CRHBYTES;
+    rho = seedbuf;                                                          // A 행렬 생성 seed rho
+    rhoprime = rho + SEEDBYTES;                                             // s1, s2 생성 seed rhoprime
+    key = rhoprime + CRHBYTES;                                              // r 행성 생성 seed k
 
     /* Expand matrix */
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);                  // shake128(rho), rejection sampling으로 A행렬 생성
 
     /* Sample short vectors s1 and s2 */
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_uniform_eta(&s1, rhoprime, 0);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_uniform_eta(&s2, rhoprime, MLDSA44_L);
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_uniform_eta(&s1, rhoprime, 0);           // shake256(rhoprime, nonce), rejection sampling으로 s1행렬 생성
+    PQCLEAN_MLDSA44_CLEAN_polyveck_uniform_eta(&s2, rhoprime, MLDSA44_L);   // shake256(rhoprime, nonce), rejection sampling으로 s2행렬 생성
 
     /* Matrix-vector multiplication */
     s1hat = s1;
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&s1hat);
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&t1);
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&s1hat);                                 // s1 ntt 변환
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);// t = A * s1 * R^-1
+    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&t1);                                 
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&t1);                          // t = A * s1
 
     /* Add error vector s2 */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_add(&t1, &t1, &s2);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_add(&t1, &t1, &s2);                          // t = A * s1 + s2
 
     /* Extract t1 and write public key */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_power2round(&t1, &t0, &t1);
-    PQCLEAN_MLDSA44_CLEAN_pack_pk(pk, rho, &t1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&t1);                                  // [-q/2, q/2] -> [0, q-1]
+    PQCLEAN_MLDSA44_CLEAN_polyveck_power2round(&t1, &t0, &t1);                  // t = t1 * 2^13 + t0
+    PQCLEAN_MLDSA44_CLEAN_pack_pk(pk, rho, &t1);                                // poly2bytes
 
     /* Compute H(rho, t1) and write secret key */
-    shake256(tr, TRBYTES, pk, PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES);
-    PQCLEAN_MLDSA44_CLEAN_pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
-
+    shake256(tr, TRBYTES, pk, PQCLEAN_MLDSA44_CLEAN_CRYPTO_PUBLICKEYBYTES);     // tr = shake256(pk)
+    PQCLEAN_MLDSA44_CLEAN_pack_sk(sk, rho, tr, key, &t0, &s1, &s2);             
+    // pk : rho, t1  sk : rho, H(pk), k, t0, s1, s2
     return 0;
 }
 
@@ -2286,58 +2291,59 @@ int PQCLEAN_MLDSA44_CLEAN_crypto_sign_signature_ctx_KAT(uint8_t *sig, size_t *si
 
 rej:
     /* Sample intermediate vector y */
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_uniform_gamma1(&y, rhoprime, nonce++);       // y 행렬 생성
 
     /* Matrix-vector multiplication */
     z = y;
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&z);
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&w1);
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&z);                                     // y행렬 ntt 변환
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);    // w = Ay * R^-1
+    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w1);                 
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&w1);                          // w = Ay
 
     /* Decompose w and call the random oracle */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_decompose(&w1, &w0, &w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(sig, &w1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&w1);                                  // w의 범위를 양수로 변경
+    PQCLEAN_MLDSA44_CLEAN_polyveck_decompose(&w1, &w0, &w1);                    // w = w1 * 2gamma2 + w0
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(sig, &w1);                           // sig = byte(w1)
     
     shake256_inc_init(&state);
-    shake256_inc_absorb(&state, mu, CRHBYTES);
-    shake256_inc_absorb(&state, sig, MLDSA44_K * POLYW1_PACKEDBYTES);
+    shake256_inc_absorb(&state, mu, CRHBYTES);                          // H(mu)
+    shake256_inc_absorb(&state, sig, MLDSA44_K * POLYW1_PACKEDBYTES);   // H(mu | w1)
     shake256_inc_finalize(&state);
     shake256_inc_squeeze(sig, CTILDEBYTES, &state);                     // ! SEEDBYTES -> CTILDEBYTES
-    shake256_inc_ctx_release(&state);
-    PQCLEAN_MLDSA44_CLEAN_poly_challenge(&cp, sig);
-    PQCLEAN_MLDSA44_CLEAN_poly_ntt(&cp);
+    shake256_inc_ctx_release(&state);                                   // ctilde = H(mu | w1)
+    PQCLEAN_MLDSA44_CLEAN_poly_challenge(&cp, sig);                     // c = SampleinBall(ctilde)
+    PQCLEAN_MLDSA44_CLEAN_poly_ntt(&cp);                                // c ntt 변환
 
     /* Compute z, reject if it reveals secret */
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_invntt_tomont(&z);
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_add(&z, &z, &y);
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_reduce(&z);
-    if (PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm(&z, GAMMA1 - BETA)) {
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_pointwise_poly_montgomery(&z, &cp, &s1); // z = c*s1*R^-1
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_invntt_tomont(&z);                       // z = c*s1
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_add(&z, &z, &y);                         // z = y + c*s1
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_reduce(&z);                              
+    if (PQCLEAN_MLDSA44_CLEAN_polyvecl_chknorm(&z, GAMMA1 - BETA)) {        // 범위가 s1의 정보를 노출할 수 있으면 reject( ||z|| > GAMMA1 - BETA)
         goto rej;
     }
 
     /* Check that subtracting cs2 does not change high bits of w and low bits
      * do not reveal secret information */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&h);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_sub(&w0, &w0, &h);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w0);
-    if (PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm(&w0, GAMMA2 - BETA)) {
-        goto rej;
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &s2); // h = c*s2*R^-1
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&h);                       // h = c*s2
+    PQCLEAN_MLDSA44_CLEAN_polyveck_sub(&w0, &w0, &h);                       // h = w0 - c*s2
+    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w0); 
+    if (PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm(&w0, GAMMA2 - BETA)) {       // Highbits(w) = Highbits(w-cs2) 의 조건을 만족시키기 위해서 Lowbits(w - c*s2) = w0 - c*s2 > GAMMA2 - BETA 를 확인
+        goto rej;                                                           // (w0 - c*s2) > GAMMA2 - BETA면 reject
     }
 
     /* Compute hints for w1 */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &t0);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&h);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&h, &cp, &t0); // h = c * t0 * R^-1
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&h);                       // h = c * t0
     PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&h);
-    if (PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm(&h, GAMMA2)) {
+    if (PQCLEAN_MLDSA44_CLEAN_polyveck_chknorm(&h, GAMMA2)) {               // Az - c*t1*2^d = w1 - c*s2 + c*t0
+                                                                            // Highbits(hintbit 하나만으로 원래 다항식으로 복원하기 위해서 c * t0 > GAMMA2 라면 reject
         goto rej;
     }
 
-    PQCLEAN_MLDSA44_CLEAN_polyveck_add(&w0, &w0, &h);
-    n = PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint(&h, &w0, &w1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_add(&w0, &w0, &h);                       // w = w0 - c*s2 + c*t0
+    n = PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint(&h, &w0, &w1);             // makehint(c * t0, w0 - c*s2 + c*t0, w1)
     if (n > OMEGA) {
         goto rej;
     }
@@ -2486,7 +2492,7 @@ int MLDSA_KAT_TEST_DET()
 
         memcpy(m, msg, mlen_temp * (count_temp + 1));
         PQCLEAN_MLDSA44_CLEAN_crypto_sign_ctx(sm, &smlen, m, mlen_temp * (count_temp + 1), ctx_temp, CTX_LEN, sk);
-        //printf("count : %d", count_temp);
+        //printf("count : %d\n", count_temp);
 
         if(memcmp(sm, sm_temp, smlen) != 0) return -1;
         

@@ -949,7 +949,7 @@ static int16_t fqmul(int16_t a, int16_t b) {
 
 void PQCLEAN_MLKEM512_CLEAN_poly_tomont(poly *r) {
     size_t i;
-    const int16_t f = (1ULL << 32) % KYBER_Q;
+    const int16_t f = (1ULL << 32) % KYBER_Q;   // R^2 mod 3329
     for (i = 0; i < KYBER_N; i++) {
         r->coeffs[i] = PQCLEAN_MLKEM512_CLEAN_montgomery_reduce((int32_t)r->coeffs[i] * f);
     }
@@ -965,7 +965,7 @@ void PQCLEAN_MLKEM512_CLEAN_ntt(int16_t r[256]) {
         for (start = 0; start < 256; start = j + len) {     // 현재 Layer에 있는 group의 첫 시작 값을 
             zeta = PQCLEAN_MLKEM512_CLEAN_zetas[k++];       // 각 group에 맞는 zeta값을 가져와서 
             for (j = start; j < start + len; j++) {         // 해당 group에 대해서서
-                t = fqmul(zeta, r[j + len]);                // t = b * zeta
+                t = fqmul(zeta, r[j + len]);                // t = b * zeta             montgomery(zeta * R, b) = zeta * b
                 r[j + len] = r[j] - t;                      // b = a - b * zeta
                 r[j] = r[j] + t;                            // a = a + b * zeta
             }
@@ -1019,12 +1019,12 @@ void PQCLEAN_MLKEM512_CLEAN_poly_sub(poly *r, const poly *a, const poly *b) {
 
 
 void PQCLEAN_MLKEM512_CLEAN_basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta) {
-    r[0]  = fqmul(a[1], b[1]);
-    r[0]  = fqmul(r[0], zeta);
-    r[0] += fqmul(a[0], b[0]);
-    r[1]  = fqmul(a[0], b[1]);
-    r[1] += fqmul(a[1], b[0]);
-}
+    r[0]  = fqmul(a[1], b[1]);  // r[0] = a[1] * b[1] * R^-1
+    r[0]  = fqmul(r[0], zeta);  // r[0] = a[1] * b[1] * R^-1 * zeta * R * R^-1 = a[1] * b[1] * R^-1 * zeta
+    r[0] += fqmul(a[0], b[0]);  // r[0] = a[1] * b[1] * R^-1 * zeta + a[0] * b[0] * R^-1 = (a[1] * b[1] * zeta + a[0] * b[0]) * R^-1
+    r[1]  = fqmul(a[0], b[1]);  // r[1] = a[0] * b[1] * R^-1
+    r[1] += fqmul(a[1], b[0]);  // r[1] = a[0] * b[1] * R^-1 + a[1] * b[0] * R^-1
+}   // ( (a0*b1 + a1*b0)x + (a[1] * b[1] * zeta + a[0] * b[0]) ) R^-1
 void PQCLEAN_MLKEM512_CLEAN_poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
     size_t i;
     for (i = 0; i < KYBER_N / 4; i++) {
@@ -1126,13 +1126,13 @@ void PQCLEAN_MLKEM512_CLEAN_indcpa_keypair_derand(uint8_t pk[KYBER_INDCPA_PUBLIC
         PQCLEAN_MLKEM512_CLEAN_poly_getnoise_eta1(&e.vec[i], noiseseed, nonce++);   // -3 ~ 3 범위의 에러값 생성
     }   // 에러 다항식 e 생성
 
-    PQCLEAN_MLKEM512_CLEAN_polyvec_ntt(&skpv);  // s를 NTT 변환
+    PQCLEAN_MLKEM512_CLEAN_polyvec_ntt(&skpv);  // s를 NTT 변환         -> ntt 변환의 결과로 몽고메리 상수가 곱해져 있지 않은 기본 NTT값을 갖게 됨
     PQCLEAN_MLKEM512_CLEAN_polyvec_ntt(&e);     // e를 NTT 변환
 
     // matrix-vector multiplication
     for (i = 0; i < KYBER_K; i++) {
-        PQCLEAN_MLKEM512_CLEAN_polyvec_basemul_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);  
-        PQCLEAN_MLKEM512_CLEAN_poly_tomont(&pkpv.vec[i]);                                   
+        PQCLEAN_MLKEM512_CLEAN_polyvec_basemul_acc_montgomery(&pkpv.vec[i], &a[i], &skpv);  // 각 다항식의 계수들이 R^-1이 곱해진 형태로 곱셈이 완료
+        PQCLEAN_MLKEM512_CLEAN_poly_tomont(&pkpv.vec[i]);                                   // Mont(A * s * R^-1, R^2) = A * s
     }   // as = A * s
 
     PQCLEAN_MLKEM512_CLEAN_polyvec_add(&pkpv, &pkpv, &e);   // as + e
@@ -1209,7 +1209,7 @@ void PQCLEAN_MLKEM512_CLEAN_indcpa_dec(uint8_t m[KYBER_INDCPA_MSGBYTES], const u
 // 실질적인 ML-KEM의 KEM-KEYPAIR 함수라고 생각하면 됨
 int PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(uint8_t *pk, uint8_t *sk, const uint8_t *coins) 
 {
-    PQCLEAN_MLKEM512_CLEAN_indcpa_keypair_derand(pk, sk, coins);
+    PQCLEAN_MLKEM512_CLEAN_indcpa_keypair_derand(pk, sk, coins);                        // indcpa keygen 함수 호출
     memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES, pk, KYBER_PUBLICKEYBYTES);                 // sk에 pk 연접
     hash_h(sk + KYBER_SECRETKEYBYTES - 2 * KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);   // sk에 H(pk) 연접
     /* Value z for pseudo-random output on reject */
@@ -1238,7 +1238,7 @@ int PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(uint8_t *ct, uint8_t *ss, const
     
     /* Multitarget countermeasure for coins + contributory KEM */
     hash_h(buf + KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES); // H(pk)를 생성
-    hash_g(kr, buf, 2 * KYBER_SYMBYTES);                    // ssk seed, H(pk)를 연접하여 ssk || r 생성
+    hash_g(kr, buf, 2 * KYBER_SYMBYTES);                    // ! ssk seed, H(pk)를 연접하여 ssk || r 생성
 
     /* coins are in kr+KYBER_SYMBYTES */
     PQCLEAN_MLKEM512_CLEAN_indcpa_enc(ct, buf, pk, kr + KYBER_SYMBYTES); // ciphertext 생성, buf : ssk seed || H(pk),  pk : t || a seed,  kr + 32 : r = G(H(pk))
