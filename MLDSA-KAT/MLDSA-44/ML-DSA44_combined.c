@@ -2130,36 +2130,36 @@ int PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify_ctx(const uint8_t *sig, size_t sigl
 
 
     /* Matrix-vector multiplication; compute Az - c * 2^d *t1 */
-    PQCLEAN_MLDSA44_CLEAN_poly_challenge(&cp, c);
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);
+    PQCLEAN_MLDSA44_CLEAN_poly_challenge(&cp, c);                           // 서명자의 ctilde값을 통해 c 생성
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_expand(mat, rho);                  // A 행렬 생성
 
-    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&z);
-    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
+    PQCLEAN_MLDSA44_CLEAN_polyvecl_ntt(&z);                                 // NTT(z)
+    PQCLEAN_MLDSA44_CLEAN_polyvec_matrix_pointwise_montgomery(&w1, mat, &z);// A * z * R^-1
 
-    PQCLEAN_MLDSA44_CLEAN_poly_ntt(&cp);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl(&t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_ntt(&t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&t1, &cp, &t1);
+    PQCLEAN_MLDSA44_CLEAN_poly_ntt(&cp);                                    // NTT(c)
+    PQCLEAN_MLDSA44_CLEAN_polyveck_shiftl(&t1);                             // t1 * 2^d
+    PQCLEAN_MLDSA44_CLEAN_polyveck_ntt(&t1);                                // NTT(t1 * 2^d)
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pointwise_poly_montgomery(&t1, &cp, &t1);// c * t1 * 2^d * R^-1
 
-    PQCLEAN_MLDSA44_CLEAN_polyveck_sub(&w1, &w1, &t1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&w1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_sub(&w1, &w1, &t1);                      // (Az - ct1*2^d) * R^-1
+    PQCLEAN_MLDSA44_CLEAN_polyveck_reduce(&w1);                             
+    PQCLEAN_MLDSA44_CLEAN_polyveck_invntt_tomont(&w1);                      // INTT( Mont( (Az - ct1*2^d) * R^-1, R^2 ) )
 
     /* Reconstruct w1 */
-    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&w1);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_use_hint(&w1, &w1, &h);
-    PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(buf, &w1);
+    PQCLEAN_MLDSA44_CLEAN_polyveck_caddq(&w1);                              // 범위 양수
+    PQCLEAN_MLDSA44_CLEAN_polyveck_use_hint(&w1, &w1, &h);                  // HighBits(w - cs2 + ct0) -> HighBits(w - cs2)
+    PQCLEAN_MLDSA44_CLEAN_polyveck_pack_w1(buf, &w1);                       // w1' poly -> bytes
 
     /* Call random oracle and verify challenge */
     shake256_inc_init(&state);
-    shake256_inc_absorb(&state, mu, CRHBYTES);
-    shake256_inc_absorb(&state, buf, MLDSA44_K * POLYW1_PACKEDBYTES);
-    shake256_inc_finalize(&state);
+    shake256_inc_absorb(&state, mu, CRHBYTES);                              // H(mu)
+    shake256_inc_absorb(&state, buf, MLDSA44_K * POLYW1_PACKEDBYTES);       // H(mu | w1')
+    shake256_inc_finalize(&state);                                          // ctilde' = H(mu | w1')
     shake256_inc_squeeze(c2, CTILDEBYTES, &state);              // ! SEEDBYTES -> CTILDEBYTES
     shake256_inc_ctx_release(&state);
     
 
-    for (i = 0; i < CTILDEBYTES; ++i) {                         
+    for (i = 0; i < CTILDEBYTES; ++i) {                                     // ctilde = ctilde' -> verify 성공
         if (c[i] != c2[i]) {                                    // ! SEEDBYTES -> CTILDEBYTES
             return -1;
         }
@@ -2343,13 +2343,13 @@ rej:
     }
 
     PQCLEAN_MLDSA44_CLEAN_polyveck_add(&w0, &w0, &h);                       // w = w0 - c*s2 + c*t0
-    n = PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint(&h, &w0, &w1);             // makehint(c * t0, w0 - c*s2 + c*t0, w1)
-    if (n > OMEGA) {
+    n = PQCLEAN_MLDSA44_CLEAN_polyveck_make_hint(&h, &w0, &w1);             // makehint(c * t0, w0 - c*s2 + c*t0, w1) -> 실제 LowBits라고 기대하는 w0 - c*s2 + c*t0의 범위를 GAMMA2로 비교하는 것으로 hint 생성
+    if (n > OMEGA) {                                                        // hint의 개수가 OMEGA보다 많으면 reject
         goto rej;
     }
 
     /* Write signature */
-    PQCLEAN_MLDSA44_CLEAN_pack_sig(sig, sig, &z, &h);
+    PQCLEAN_MLDSA44_CLEAN_pack_sig(sig, sig, &z, &h);                       // c, z, h를 encoding 하는 것으로 signature 생성
 
     *siglen = PQCLEAN_MLDSA44_CLEAN_CRYPTO_BYTES;
     return 0;
