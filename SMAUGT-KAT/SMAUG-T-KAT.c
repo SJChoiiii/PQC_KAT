@@ -2235,6 +2235,9 @@ int main()
     uint8_t cmp_sk[KEM_SECRETKEY_BYTES];
     uint8_t cmp_ctxt[CIPHERTEXT_BYTES];
     uint8_t cmp_ss[32];
+    uint8_t mul_mode[10];
+    if(MUL_MOD == 0) sprintf(mul_mode, "Original");
+    else sprintf(mul_mode, "NTT");
     sprintf(fp_rsp, "sjchoi change easy seed SMAUG T%d PQCkemKAT_%u.rsp", SMAUG_MODE, KEM_SECRETKEY_BYTES);
     fp = fopen(fp_rsp, "r");
     while(feof(fp) == 0)
@@ -2266,7 +2269,7 @@ int main()
         
         //printf("%d is done\n", count);
     }
-    printf("SMAUG-T%d KAT DONE", SMAUG_MODE);
+    printf("SMAUG-T%d %s-mul KAT DONE", SMAUG_MODE, mul_mode);
 
     return 0;
 }

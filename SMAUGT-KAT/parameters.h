@@ -10,7 +10,7 @@
 
 #define SMAUG_MODE 1
 #define RAND 1          // 0 -> window rand, 1 -> 직접 입력 
-#define MUL_MOD 0       // 0 -> Original   , 1 -> NTT
+#define MUL_MOD 1       // 0 -> Original   , 1 -> NTT
 
 
 #if SMAUG_MODE == 1
