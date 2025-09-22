@@ -1227,14 +1227,14 @@ void bytes_to_Rq(poly* data, const uint8_t bytes[PKPOLY_BYTES]) {
 
     for (i = 0; i < 2; ++i) {
         for (j = 0; j < DATA_OFFSET; ++j) {
-            tmp[d_idx + j]                   = buf[b_idx + j] >> 8; // temp[0  ~ 15 + 128*d_i] = buf[0~15 + 16*b_i] >> 8; temp에 buf의 상위 8bit를 저장
-            tmp[d_idx + DATA_OFFSET + j]     = buf[b_idx + j] >> 6; // temp[16 ~ 31 + 128*d_i] = buf[0~15 + 16*b_i] >> 6; temp에 buf의 상위 10bit를 저장
-            tmp[d_idx + DATA_OFFSET * 2 + j] = buf[b_idx + j] >> 4; // temp[32 ~ 47 + 128*d_i] = buf[0~15 + 16*b_i] >> 4; temp에 buf의 상위 12bit를 저장
-            tmp[d_idx + DATA_OFFSET * 3 + j] = buf[b_idx + j] >> 2; // temp[48 ~ 63 + 128*d_i] = buf[0~15 + 16*b_i] >> 2; temp에 buf의 상위 14bit를 저장
-            tmp[d_idx + DATA_OFFSET * 4 + j] = buf[b_idx + j];      // temp[64 ~ 79 + 128*d_i] = buf[0~15 + 16*b_i];      temp에 buf를 저장
-            tmp[d_idx + DATA_OFFSET * 5 + j] = buf[b_idx + j] << 2; // temp[80 ~ 95 + 128*d_i] = buf[0~15 + 16*b_i] << 2; temp에 buf의 하위 14bit | 00 으로 저장
-            tmp[d_idx + DATA_OFFSET * 6 + j] = buf[b_idx + j] << 4; // temp[96 ~111 + 128*d_i] = buf[0~15 + 16*b_i] << 4; temp에 buf의 하위 12bit | 0000 으로 저장
-            tmp[d_idx + DATA_OFFSET * 7 + j] = buf[b_idx + j] << 6; // temp[112~127 + 128*d_i] = buf[0~15 + 16*b_i] << 6; temp에 buf의 하위 10bit | 000000으로 저장
+            tmp[d_idx + j]                   = buf[b_idx + j] >> 8; // temp[0  ~ 15 + 128*i] = buf[0~15 + 16*b_i] >> 8; temp에 buf의 상위 8bit를 저장                   1100 0000 0000 0000
+            tmp[d_idx + DATA_OFFSET + j]     = buf[b_idx + j] >> 6; // temp[16 ~ 31 + 128*i] = buf[0~15 + 16*b_i] >> 6; temp에 buf의 상위 10bit를 저장                  0011 0000 0000 0000
+            tmp[d_idx + DATA_OFFSET * 2 + j] = buf[b_idx + j] >> 4; // temp[32 ~ 47 + 128*i] = buf[0~15 + 16*b_i] >> 4; temp에 buf의 상위 12bit를 저장                  0000 1100 0000 0000
+            tmp[d_idx + DATA_OFFSET * 3 + j] = buf[b_idx + j] >> 2; // temp[48 ~ 63 + 128*i] = buf[0~15 + 16*b_i] >> 2; temp에 buf의 상위 14bit를 저장                  0000 0011 0000 0000
+            tmp[d_idx + DATA_OFFSET * 4 + j] = buf[b_idx + j];      // temp[64 ~ 79 + 128*i] = buf[0~15 + 16*b_i];      temp에 buf를 저장                              0000 0000 1100 0000
+            tmp[d_idx + DATA_OFFSET * 5 + j] = buf[b_idx + j] << 2; // temp[80 ~ 95 + 128*i] = buf[0~15 + 16*b_i] << 2; temp에 buf의 하위 14bit | 00 으로 저장          0000 0000 0011 0000
+            tmp[d_idx + DATA_OFFSET * 6 + j] = buf[b_idx + j] << 4; // temp[96 ~111 + 128*i] = buf[0~15 + 16*b_i] << 4; temp에 buf의 하위 12bit | 0000 으로 저장        0000 0000 0000 1100
+            tmp[d_idx + DATA_OFFSET * 7 + j] = buf[b_idx + j] << 6; // temp[112~127 + 128*i] = buf[0~15 + 16*b_i] << 6; temp에 buf의 하위 10bit | 000000으로 저장       0000 0000 0000 00111
         }
         b_idx += DATA_OFFSET;
         d_idx += DATA_OFFSET * 8;
@@ -1720,7 +1720,7 @@ int hwt(int16_t* res, const uint8_t* seed) {
     unsigned int i;
     int16_t si[LWE_N] = { 0 };
     uint16_t rand[HWTSEEDBYTES / 2] = { 0 };
-    uint8_t sign[LWE_N / 4] = { 0 };
+    uint8_t sign[LWE_N / 8] = { 0 };                    // sign[LWE_N / 4] = { 0 }; -> sign[LWE_N / 4] = { 0 };
     uint8_t buf[HWTSEEDBYTES] = { 0 };
 
     keccak_state state;
@@ -1736,22 +1736,22 @@ int hwt(int16_t* res, const uint8_t* seed) {
         return -1;                                      // 이 때, rejection sampling을 하는 배열은 308개의 배열인데, 해당하는 배열로 원하는 값을 sampling하지 못하면 
     }                                                   // 사용하는 seed값을 변경하기 위해서 return -1
 
-    shake256_squeeze(sign, LWE_N / 4, &state);          // hamming weight의 결과 값을 위한 sign 값을 생성
-    // -> shake256_squeeze(sign, LWE_N / 8, &state); 로 변경해도 무방함
+    shake256_squeeze(sign, LWE_N / 8, &state);          // hamming weight의 결과 값을 위한 sign 값을 생성
+    // shake256_squeeze(sign, LWE_N / 4, &state); -> shake256_squeeze(sign, LWE_N / 8, &state);
 
     int16_t t0;
     int16_t c0 = LWE_N - HS;        // 256 - 70 = 186
     for (i = 0; i < LWE_N; i++) {
         t0 = (si[i] - c0) >> 15;    // si[i] - c0 가 양수 -> 0   (si[i]의 값이 c0보다 크면)
-        //               음수 -> -1  (si[i]의 값이 c0보다 작으면)
+                                    //               음수 -> -1  (si[i]의 값이 c0보다 작으면)
 
         c0 += t0;                   //               c0 + 0
-        //               c0 - 1
+                                    //               c0 - 1
 
         res[i] = 1 + t0;            // res = 1 + t0  양수 -> 1, 음수 -> 0
         // 즉, si[i]가 c0보다 클 때마다 res[i]에 1의 값을 넣어주는데,
         // 여기에서 c0보다 작으면 c0의 값을 -1 해주는 것으로 res[i]에 1을 넣을 범위를 늘려줌
-        // 결국 계속해서 si[i]가 c0보다 작다면 맨 마지막 70개에 대해서는 무조건 c0보다 작아지기 때문에
+        // 결국 계속해서 si[i]가 c0보다 작다면 맨 마지막 70개에 대해서는 무조건 c0보다 커지기 때문에
         // 고정된 Hamming weight를 갖게 됨
 
         // Convert to ternary
@@ -1940,8 +1940,8 @@ void KAT_indcpa_keypair(uint8_t pk[PUBLICKEY_BYTES],
 
     genSx_vec(&sk_tmp, seed);                                   // 생성한 seed[0~31]을 통해 비밀값 s 생성
 
-    memcpy(&pk_tmp.seed, seed + CRYPTO_BYTES, PKSEED_BYTES);    // pk_tmp.seed에에 생성한 seed[32~63]을 저장
-    genPubkey(&pk_tmp, &sk_tmp, seed);                          // seed[32~63]을 통해 A를 생성, 생성한 s와 결합하여 b = -As + e를 생성
+    memcpy(&pk_tmp.seed, seed + CRYPTO_BYTES, PKSEED_BYTES);    // pk_tmp.seed에 생성한 seed[32~63]을 저장
+    genPubkey(&pk_tmp, &sk_tmp, seed);                          // seed[0~31]을 통해 e를 seed[32~63]을 통해 A를 생성, 생성한 s와 결합하여 b = -As + e를 생성
 
     memset(pk, 0, PUBLICKEY_BYTES);                             
     memset(sk, 0, PKE_SECRETKEY_BYTES);
@@ -2080,53 +2080,6 @@ int crypto_kem_dec(uint8_t* ss, const uint8_t* ctxt, const uint8_t* sk) {
     cmov(ss, buf + DELTA_BYTES, CRYPTO_BYTES, 1);                       // 저장한 SSK를 ss에 저장
     return 0;
 }
-
-
-
-// int TEST()
-// {
-//     int res;
-//     uint8_t* pk = (uint8_t*)malloc(PUBLICKEY_BYTES);
-//     uint8_t* sk = (uint8_t*)malloc(KEM_SECRETKEY_BYTES);
-
-//     uint8_t ctxt[CIPHERTEXT_BYTES];
-//     uint8_t ss[32];
-//     uint8_t ss2[32];
-
-//     crypto_kem_keypair(pk, sk);
-//     printf("pk = \n\n");
-//     for(int i = 0;i<PUBLICKEY_BYTES;i++)
-//     {
-//         printf("%02X", pk[i]);
-//     }
-
-//     printf("\n\nsk = \n\n");
-//     for(int i = 0;i<PUBLICKEY_BYTES;i++)
-//     {
-//         printf("%02X", sk[i]);
-//     }
-//     res = crypto_kem_enc(ctxt, ss, pk);
-//     res = crypto_kem_dec(ss2, ctxt, sk);
-
-
-//     if (res != 0) return 1;
-
-//     printf("\n\n");
-//     for (int i = 0; i < 32; i++)
-//     {
-//         printf("%02x ", ss[i]);
-//     }
-
-//     printf("\n\n");
-//     for (int i = 0; i < 32; i++)
-//     {
-//         printf("%02x ", ss2[i]);
-//     }
-//     sk = NULL;
-//     pk = NULL;
-    
-//     return 0;
-// }
 
 #define MAX_MARKER_LEN 50
 #define KAT_SUCCESS 0
