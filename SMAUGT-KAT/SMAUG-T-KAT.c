@@ -1173,14 +1173,14 @@ void Rq_to_bytes(uint8_t bytes[PKPOLY_BYTES], const poly* data) {
     int16_t buf[DATA_OFFSET * 2] = { 0 };
     for (i = 0; i < 2; ++i) {
         for (j = 0; j < DATA_OFFSET; ++j) {
-            buf[b_idx + j]  = tmp[d_idx + j]                   << 8;  // buf[0~15 + 8*b_idx] = tmp[0  ~ 15 + 128*b_idx] 1100 0000 0000 0000 
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET + j]     << 6;  // buf[0~15 + 8*b_idx] = tmp[16 ~ 31 + 128*b_idx] 0011 0000 0000 0000
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 2 + j] << 4;  // buf[0~15 + 8*b_idx] = tmp[32 ~ 47 + 128*b_idx] 0000 1100 0000 0000
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 3 + j] << 2;  // buf[0~15 + 8*b_idx] = tmp[48 ~ 63 + 128*b_idx] 0000 0011 0000 0000
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 4 + j];       // buf[0~15 + 8*b_idx] = tmp[64 ~ 79 + 128*b_idx] 0000 0000 1100 0000 
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 5 + j] >> 2;  // buf[0~15 + 8*b_idx] = tmp[80 ~ 95 + 128*b_idx] 0000 0000 0011 0000
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 6 + j] >> 4;  // buf[0~15 + 8*b_idx] = tmp[96 ~111 + 128*b_idx] 0000 0000 0000 1100
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 7 + j] >> 6;  // buf[0~15 + 8*b_idx] = tmp[112~127 + 128*b_idx] 0000 0000 0000 0011
+            buf[b_idx + j]  = tmp[d_idx + j]                   << 8;  // buf[0~15 + 16*i] = tmp[0  ~ 15 + 128*i] 1100 0000 0000 0000 
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET + j]     << 6;  // buf[0~15 + 16*i] = tmp[16 ~ 31 + 128*i] 0011 0000 0000 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 2 + j] << 4;  // buf[0~15 + 16*i] = tmp[32 ~ 47 + 128*i] 0000 1100 0000 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 3 + j] << 2;  // buf[0~15 + 16*i] = tmp[48 ~ 63 + 128*i] 0000 0011 0000 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 4 + j];       // buf[0~15 + 16*i] = tmp[64 ~ 79 + 128*i] 0000 0000 1100 0000 
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 5 + j] >> 2;  // buf[0~15 + 16*i] = tmp[80 ~ 95 + 128*i] 0000 0000 0011 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 6 + j] >> 4;  // buf[0~15 + 16*i] = tmp[96 ~111 + 128*i] 0000 0000 0000 1100
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 7 + j] >> 6;  // buf[0~15 + 16*i] = tmp[112~127 + 128*i] 0000 0000 0000 0011
         }                                                             // 위와 같이 값을 저장
         b_idx += DATA_OFFSET;
         d_idx += DATA_OFFSET * 8;
@@ -1189,25 +1189,25 @@ void Rq_to_bytes(uint8_t bytes[PKPOLY_BYTES], const poly* data) {
 #endif
 #if LOG_Q == 11
     for (i = 0; i < LWE_N; ++i) {
-        bytes[i] = data->coeffs[i] >> 8;
-        tmp[i] = data->coeffs[i] & 0x00e0;
+        bytes[i] = data->coeffs[i] >> 8;        // bytes[i]에 b값의 상위 8bit를 저장
+        tmp[i] = data->coeffs[i] & 0x00e0;      // tmp[i]에 b값의 중위 3bit를 저장    -> 실제로 필요한 값인 11bit만을 저장한다는 의미임
     }
     int shift = 5;
     int16_t buf[DATA_OFFSET * 3] = { 0 };
     for (i = 0; i < 3; ++i) {
         for (j = 0; j < DATA_OFFSET; ++j) {
-            buf[b_idx + j] = (tmp[j] >> shift) & 0x01;
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET + j] << 8;
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 2 + j] << 5;
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 3 + j] << 2;
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 4 + j] >> 1;
-            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 5 + j] >> 4;
+            buf[b_idx + j] = (tmp[j] >> shift) & 0x01;                  // buf[0~15 + 16*i]  = ( tmp[0~15] >> (5+i) ) & 0x01      0000 0000 0000 0001
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET + j] << 8;        // buf[0~15 + 16*i] |= tmp[16~31 + 80*i] << 8             1110 0000 0000 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 2 + j] << 5;    // buf[0~15 + 16*i] |= tmp[32~47 + 80*i] << 5             0001 1100 0000 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 3 + j] << 2;    // buf[0~15 + 16*i] |= tmp[48~63 + 80*i] << 2             0000 0011 1000 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 4 + j] >> 1;    // buf[0~15 + 16*i] |= tmp[64~79 + 80*i] >> 1             0000 0000 0111 0000
+            buf[b_idx + j] |= tmp[d_idx + DATA_OFFSET * 5 + j] >> 4;    // buf[0~15 + 16*i] |= tmp[80~95 + 80*i] >> 4             0000 0000 0000 1110
         }
         b_idx += DATA_OFFSET;
         d_idx += DATA_OFFSET * 5;
         shift++;
     }
-    store16_littleendian(bytes + LWE_N, buf, DATA_OFFSET * 3);
+    store16_littleendian(bytes + LWE_N, buf, DATA_OFFSET * 3);      // 저장한 값을 byte 형식으로 bytes[256~351]에 저장
 #endif
 }
 
@@ -1220,7 +1220,7 @@ void bytes_to_Rq(poly* data, const uint8_t bytes[PKPOLY_BYTES]) {
     for (i = 0; i < LWE_N; ++i)
         data->coeffs[i] = (int16_t)bytes[i] << 8;               // data->coeffs[i]의 상위 8bit를 shake128의 결과값으로 집어 넣어 줌
                                                                 // enc 과정에서는 b 행렬을 저장
-
+    
     int16_t buf[DATA_OFFSET * 2] = { 0 };
     load16_littleendian(buf, DATA_OFFSET * 2, bytes + LWE_N);   // buf 배열에 들어가지 않은 나머지 bytes 값을 저장
     // 320 - 256 = 64 즉, buf[i] = bytes[2i+1] | bytes[2i] 으로 저장해줌
@@ -1234,7 +1234,7 @@ void bytes_to_Rq(poly* data, const uint8_t bytes[PKPOLY_BYTES]) {
             tmp[d_idx + DATA_OFFSET * 4 + j] = buf[b_idx + j];      // temp[64 ~ 79 + 128*i] = buf[0~15 + 16*b_i];      temp에 buf를 저장                              0000 0000 1100 0000
             tmp[d_idx + DATA_OFFSET * 5 + j] = buf[b_idx + j] << 2; // temp[80 ~ 95 + 128*i] = buf[0~15 + 16*b_i] << 2; temp에 buf의 하위 14bit | 00 으로 저장          0000 0000 0011 0000
             tmp[d_idx + DATA_OFFSET * 6 + j] = buf[b_idx + j] << 4; // temp[96 ~111 + 128*i] = buf[0~15 + 16*b_i] << 4; temp에 buf의 하위 12bit | 0000 으로 저장        0000 0000 0000 1100
-            tmp[d_idx + DATA_OFFSET * 7 + j] = buf[b_idx + j] << 6; // temp[112~127 + 128*i] = buf[0~15 + 16*b_i] << 6; temp에 buf의 하위 10bit | 000000으로 저장       0000 0000 0000 00111
+            tmp[d_idx + DATA_OFFSET * 7 + j] = buf[b_idx + j] << 6; // temp[112~127 + 128*i] = buf[0~15 + 16*b_i] << 6; temp에 buf의 하위 10bit | 000000으로 저장       0000 0000 0000 0011
         }
         b_idx += DATA_OFFSET;
         d_idx += DATA_OFFSET * 8;
@@ -1243,7 +1243,7 @@ void bytes_to_Rq(poly* data, const uint8_t bytes[PKPOLY_BYTES]) {
         data->coeffs[i] |= tmp[i] & 0x00c0; // coeff[i] = coeff[i] | (temp[i] & 0b 0000 0000 1100 0000)
     // 즉, coeff[i] | temp[i]의 7, 6번 bit를 coeff의 7, 6번 bit로 사용하겠다는 의미
     // -> 앞에서 data->coeffs[i]의 값은 상위 8bit만을 뽑아서 사용했음,
-    // 여기에서, >> 6을 통해 각 계수의 값을 상위 10bit만을 사용할 것이기 때문에 마지막 2bit를 temp를 통해 채우겠다는 의미임
+    // 여기에서, << 6을 통해 각 계수의 값을 상위 10bit만을 사용할 것이기 때문에 마지막 2bit를 temp를 통해 채우겠다는 의미임
 #endif
 #if LOG_Q == 11
     for (i = 0; i < LWE_N; ++i)
@@ -1255,19 +1255,20 @@ void bytes_to_Rq(poly* data, const uint8_t bytes[PKPOLY_BYTES]) {
     int shift = 5;
     for (i = 0; i < 3; ++i) {
         for (j = 0; j < DATA_OFFSET; ++j) {
-            tmp[j] |= (buf[b_idx + j] & 0x01) << shift;
-            tmp[d_idx + DATA_OFFSET + j] = buf[b_idx + j] >> 8;
-            tmp[d_idx + DATA_OFFSET * 2 + j] = buf[b_idx + j] >> 5;
-            tmp[d_idx + DATA_OFFSET * 3 + j] = buf[b_idx + j] >> 2;
-            tmp[d_idx + DATA_OFFSET * 4 + j] = buf[b_idx + j] << 1;
-            tmp[d_idx + DATA_OFFSET * 5 + j] = buf[b_idx + j] << 4;
+            tmp[j] |= (buf[b_idx + j] & 0x01) << shift;                 // tmp[ 0 ~ 15]       |= (buf[0~15 + 16*b_i] & 0x01) << (5+i)   0000 0000 0000 0001 첫 for문 에서 0 ~ 15의 마지막 1bit, 두 번째 for문에서 0 ~ 15의 두 번째 1bit, 마지막 for문에서 0 ~ 15의 첫 번째 1bit를 생성 
+            tmp[d_idx + DATA_OFFSET + j] = buf[b_idx + j] >> 8;         // tmp[16 ~ 31 + 80*i] = buf[0~15 + 16*b_i] >> 8                1110 0000 0000 0000
+            tmp[d_idx + DATA_OFFSET * 2 + j] = buf[b_idx + j] >> 5;     // tmp[32 ~ 47 + 80*i] = buf[0~15 + 16*b_i] >> 5                0001 1100 0000 0000
+            tmp[d_idx + DATA_OFFSET * 3 + j] = buf[b_idx + j] >> 2;     // tmp[48 ~ 63 + 80*i] = buf[0~15 + 16*b_i] >> 2                0000 0011 1000 0000
+            tmp[d_idx + DATA_OFFSET * 4 + j] = buf[b_idx + j] << 1;     // tmp[64 ~ 79 + 80*i] = buf[0~15 + 16*b_i] << 1                0000 0000 0111 0000
+            tmp[d_idx + DATA_OFFSET * 5 + j] = buf[b_idx + j] << 4;     // tmp[80 ~ 95 + 80*i] = buf[0~15 + 16*b_i] << 4                0000 0000 0000 1110
         }
         b_idx += DATA_OFFSET;
         d_idx += DATA_OFFSET * 5;
         shift++;
     }
     for (i = 0; i < LWE_N; ++i)
-        data->coeffs[i] |= tmp[i] & 0x00e0;
+        data->coeffs[i] |= tmp[i] & 0x00e0; // coeff[i] = coeff[i] | (tmp[i] & 0000 0000 1110 0000)
+    // << 5 를 이용해서 각 계수의 값을 상위 11bit만을 사용할 것이기 때문에 마지막 3bit를 temp를 통해 채움
 #endif
 }
 
@@ -1309,28 +1310,28 @@ void Rp_to_bytes(uint8_t bytes[CTPOLY1_BYTES], const poly* data) {
 
     unsigned int i;
     for (i = 0; i < LWE_N; ++i) {
-        bytes[i] = data->coeffs[i] & 0xff;
-        tmp[i] = data->coeffs[i] & 0x00100;
-    }
+        bytes[i] = data->coeffs[i] & 0xff; // data coeff의 하위 8bit 가져와서 bytes로 저장
+        tmp[i] = data->coeffs[i] & 0x0100; // data coeff의 나머지 0000 0001 0000 0000
+    }    
 
     int16_t buf[DATA_OFFSET] = { 0 };
     for (i = 0; i < DATA_OFFSET; ++i) {
-        buf[i] = tmp[i] << 7;
-        buf[i] |= tmp[DATA_OFFSET + i] << 6;
-        buf[i] |= tmp[DATA_OFFSET * 2 + i] << 5;
-        buf[i] |= tmp[DATA_OFFSET * 3 + i] << 4;
-        buf[i] |= tmp[DATA_OFFSET * 4 + i] << 3;
-        buf[i] |= tmp[DATA_OFFSET * 5 + i] << 2;
-        buf[i] |= tmp[DATA_OFFSET * 6 + i] << 1;
-        buf[i] |= tmp[DATA_OFFSET * 7 + i];
-        buf[i] |= tmp[DATA_OFFSET * 8 + i] >> 1;
-        buf[i] |= tmp[DATA_OFFSET * 9 + i] >> 2;
-        buf[i] |= tmp[DATA_OFFSET * 10 + i] >> 3;
-        buf[i] |= tmp[DATA_OFFSET * 11 + i] >> 4;
-        buf[i] |= tmp[DATA_OFFSET * 12 + i] >> 5;
-        buf[i] |= tmp[DATA_OFFSET * 13 + i] >> 6;
-        buf[i] |= tmp[DATA_OFFSET * 14 + i] >> 7;
-        buf[i] |= tmp[DATA_OFFSET * 15 + i] >> 8;
+        buf[i] = tmp[i] << 7;                       // buf[0~15]  = tmp[  0~15]  << 7       1000 0000 0000 0000
+        buf[i] |= tmp[DATA_OFFSET + i] << 6;        // buf[0~15] |= tmp[ 16~31]  << 6       0100 0000 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 2 + i] << 5;    // buf[0~15] |= tmp[ 32~47]  << 5       0010 0000 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 3 + i] << 4;    // buf[0~15] |= tmp[ 48~63]  << 4       0001 0000 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 4 + i] << 3;    // buf[0~15] |= tmp[ 64~79]  << 3       0000 1000 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 5 + i] << 2;    // buf[0~15] |= tmp[ 80~96]  << 2       0000 0100 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 6 + i] << 1;    // buf[0~15] |= tmp[ 97~111] << 1       0000 0010 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 7 + i];         // buf[0~15] |= tmp[112~127]            0000 0001 0000 0000
+        buf[i] |= tmp[DATA_OFFSET * 8 + i] >> 1;    // buf[0~15] |= tmp[128~143] >> 1       0000 0000 1000 0000
+        buf[i] |= tmp[DATA_OFFSET * 9 + i] >> 2;    // buf[0~15] |= tmp[144~159] >> 2       0000 0000 0100 0000
+        buf[i] |= tmp[DATA_OFFSET * 10 + i] >> 3;   // buf[0~15] |= tmp[160~175] >> 3       0000 0000 0010 0000
+        buf[i] |= tmp[DATA_OFFSET * 11 + i] >> 4;   // buf[0~15] |= tmp[176~191] >> 4       0000 0000 0001 0000
+        buf[i] |= tmp[DATA_OFFSET * 12 + i] >> 5;   // buf[0~15] |= tmp[192~207] >> 5       0000 0000 0000 1000
+        buf[i] |= tmp[DATA_OFFSET * 13 + i] >> 6;   // buf[0~15] |= tmp[208~223] >> 6       0000 0000 0000 0100
+        buf[i] |= tmp[DATA_OFFSET * 14 + i] >> 7;   // buf[0~15] |= tmp[224~239] >> 7       0000 0000 0000 0010
+        buf[i] |= tmp[DATA_OFFSET * 15 + i] >> 8;   // buf[0~15] |= tmp[240~255] >> 8       0000 0000 0000 0001
     }
     store16_littleendian(bytes + LWE_N, buf, DATA_OFFSET);
 #endif
@@ -1363,8 +1364,8 @@ void Rp2_to_bytes(uint8_t bytes[CTPOLY2_BYTES], const poly* data) {
 #if LOG_P2 == 4
     unsigned int i;
     for (i = 0; i < LWE_N / 2; ++i) {
-        bytes[i] = data->coeffs[2 * i] & 0x000f;
-        bytes[i] |= (data->coeffs[2 * i + 1] << 4) & 0x00f0;
+        bytes[i] = data->coeffs[2 * i] & 0x000f;                // bytes = 0000 1111
+        bytes[i] |= (data->coeffs[2 * i + 1] << 4) & 0x00f0;    // bytes = 1111 0000 을 저장
     }
 #endif
 #if LOG_P2 == 7
@@ -1375,18 +1376,18 @@ void Rp2_to_bytes(uint8_t bytes[CTPOLY2_BYTES], const poly* data) {
     int16_t buf[DATA_OFFSET * 7] = { 0 };
     for (i = 0; i < 2; ++i) {
         for (j = 0; j < DATA_OFFSET; ++j) {
-            buf[j] |= (data->coeffs[d_idx + j] & 0x40) << shift[0];
-            buf[DATA_OFFSET + j] |= (data->coeffs[d_idx + j] & 0x20)
+            buf[j] |= (data->coeffs[d_idx + j] & 0x40) << shift[0];             // buf[ 0 ~ 15] |= coeff[224 ~ 240 + 16*i] << 1+8*i  0100 0000 -> 1000 0000
+            buf[DATA_OFFSET + j] |= (data->coeffs[d_idx + j] & 0x20)            // buf[16 ~ 31] |= coeff[224 ~ 240 + 16*i] << 2+8*i  0010 0000 -> 1000 0000
                 << shift[1];
-            buf[DATA_OFFSET * 2 + j] |= (data->coeffs[d_idx + j] & 0x10)
+            buf[DATA_OFFSET * 2 + j] |= (data->coeffs[d_idx + j] & 0x10)        // buf[32 ~ 47] |= coeff[224 ~ 240 + 16*i] << 3+8*i  0001 0000 -> 1000 0000
                 << shift[2];
-            buf[DATA_OFFSET * 3 + j] |= (data->coeffs[d_idx + j] & 0x08)
+            buf[DATA_OFFSET * 3 + j] |= (data->coeffs[d_idx + j] & 0x08)        // buf[48 ~ 63] |= coeff[224 ~ 240 + 16*i] << 4+8*i  0000 1000 -> 1000 0000
                 << shift[3];
-            buf[DATA_OFFSET * 4 + j] |= (data->coeffs[d_idx + j] & 0x04)
+            buf[DATA_OFFSET * 4 + j] |= (data->coeffs[d_idx + j] & 0x04)        // buf[64 ~ 79] |= coeff[224 ~ 240 + 16*i] << 5+8*i  0000 0100 -> 1000 0000
                 << shift[4];
-            buf[DATA_OFFSET * 5 + j] |= (data->coeffs[d_idx + j] & 0x02)
+            buf[DATA_OFFSET * 5 + j] |= (data->coeffs[d_idx + j] & 0x02)        // buf[80 ~ 95] |= coeff[224 ~ 240 + 16*i] << 6+8*i  0000 0010 -> 1000 0000
                 << shift[5];
-            buf[DATA_OFFSET * 6 + j] |= (data->coeffs[d_idx + j] & 0x01)
+            buf[DATA_OFFSET * 6 + j] |= (data->coeffs[d_idx + j] & 0x01)        // buf[96 ~111] |= coeff[224 ~ 240 + 16*i] << 7+8*i  0000 0001 -> 1000 0000
                 << shift[6];
         }
         d_idx += DATA_OFFSET;
@@ -1395,9 +1396,9 @@ void Rp2_to_bytes(uint8_t bytes[CTPOLY2_BYTES], const poly* data) {
     }
 
     uint8_t tmp[CTPOLY2_BYTES] = { 0 };
-    store16_littleendian(tmp, buf, DATA_OFFSET * 7);
+    store16_littleendian(tmp, buf,DATA_OFFSET * 7);
     for (i = 0; i < CTPOLY2_BYTES; ++i)
-        bytes[i] = tmp[i] | (data->coeffs[i] & 0x7f);
+        bytes[i] = tmp[i] | (data->coeffs[i] & 0x7f); // 1000 0000 | 0111 1111
 #endif
 }
 
@@ -1415,28 +1416,28 @@ void bytes_to_Rp(poly* data, const uint8_t bytes[CTPOLY1_BYTES]) {
         data->coeffs[i] = (int16_t)bytes[i];
 
     int16_t buf[DATA_OFFSET] = { 0 };
-    load16_littleendian(buf, DATA_OFFSET, bytes + LWE_N);
+    load16_littleendian(buf, DATA_OFFSET, bytes + LWE_N);   // 8bit로 저장되어 있는 bytes의 뒷 부분을 16bit로 변경
 
     for (i = 0; i < DATA_OFFSET; ++i) {
-        tmp[i] = buf[i] >> 7;
-        tmp[DATA_OFFSET + i] = buf[i] >> 6;
-        tmp[DATA_OFFSET * 2 + i] = buf[i] >> 5;
-        tmp[DATA_OFFSET * 3 + i] = buf[i] >> 4;
-        tmp[DATA_OFFSET * 4 + i] = buf[i] >> 3;
-        tmp[DATA_OFFSET * 5 + i] = buf[i] >> 2;
-        tmp[DATA_OFFSET * 6 + i] = buf[i] >> 1;
-        tmp[DATA_OFFSET * 7 + i] = buf[i];
-        tmp[DATA_OFFSET * 8 + i] = buf[i] << 1;
-        tmp[DATA_OFFSET * 9 + i] = buf[i] << 2;
-        tmp[DATA_OFFSET * 10 + i] = buf[i] << 3;
-        tmp[DATA_OFFSET * 11 + i] = buf[i] << 4;
-        tmp[DATA_OFFSET * 12 + i] = buf[i] << 5;
-        tmp[DATA_OFFSET * 13 + i] = buf[i] << 6;
-        tmp[DATA_OFFSET * 14 + i] = buf[i] << 7;
-        tmp[DATA_OFFSET * 15 + i] = buf[i] << 8;
+        tmp[i] = buf[i] >> 7;                               // tmp[  0~15 ] = buf[0~15] >> 7    1000 0000 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET + i] = buf[i] >> 6;                 // tmp[ 16~31 ] = buf[0~15] >> 6    0100 0000 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 2 + i] = buf[i] >> 5;             // tmp[ 32~47 ] = buf[0~15] >> 5    0010 0000 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 3 + i] = buf[i] >> 4;             // tmp[ 48~63 ] = buf[0~15] >> 4    0001 0000 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 4 + i] = buf[i] >> 3;             // tmp[ 64~79 ] = buf[0~15] >> 3    0000 1000 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 5 + i] = buf[i] >> 2;             // tmp[ 80~96 ] = buf[0~15] >> 2    0000 0100 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 6 + i] = buf[i] >> 1;             // tmp[ 97~111] = buf[0~15] >> 1    0000 0010 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 7 + i] = buf[i];                  // tmp[112~127] = buf[0~15]         0000 0001 0000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 8 + i] = buf[i] << 1;             // tmp[128~143] = buf[0~15] << 1    0000 0000 1000 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 9 + i] = buf[i] << 2;             // tmp[144~159] = buf[0~15] << 2    0000 0000 0100 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 10 + i] = buf[i] << 3;            // tmp[160~175] = buf[0~15] << 3    0000 0000 0010 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 11 + i] = buf[i] << 4;            // tmp[176~191] = buf[0~15] << 4    0000 0000 0001 0000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 12 + i] = buf[i] << 5;            // tmp[192~207] = buf[0~15] << 5    0000 0000 0000 1000 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 13 + i] = buf[i] << 6;            // tmp[208~223] = buf[0~15] << 6    0000 0000 0000 0100 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 14 + i] = buf[i] << 7;            // tmp[224~239] = buf[0~15] << 7    0000 0000 0000 0010 -> 0000 0001 0000 0000
+        tmp[DATA_OFFSET * 15 + i] = buf[i] << 8;            // tmp[240~255] = buf[0~15] << 8    0000 0000 0000 0001 -> 0000 0001 0000 0000
     }
     for (i = 0; i < LWE_N; ++i)
-        data->coeffs[i] |= tmp[i] & 0x00100;
+        data->coeffs[i] |= tmp[i] & 0x0100;
 #endif
 }
 
@@ -1470,36 +1471,36 @@ void bytes_to_Rp2(poly* data, const uint8_t bytes[CTPOLY2_BYTES]) {
     for (i = 0; i < LWE_N / 2; ++i) {
         data->coeffs[2 * i] = bytes[i] & 0x0f;
         data->coeffs[2 * i + 1] = (bytes[i] & 0xf0) >> 4;
-    }
+    }   // 1byte 1개 -> 4bit 2개로 decoding 진행
 #endif
 #if LOG_P2 == 7
     int d_idx = CTPOLY2_BYTES;
     unsigned int i, j;
     for (i = 0; i < CTPOLY2_BYTES; ++i)
-        data->coeffs[i] = (int16_t)bytes[i] & 0x7f;
+        data->coeffs[i] = (int16_t)bytes[i] & 0x7f; // data->coeffs[i] = bytes[i] & 0111 1111
 
     uint8_t tmp[CTPOLY2_BYTES] = { 0 };
     int16_t buf[DATA_OFFSET * 7] = { 0 };
     for (i = 0; i < CTPOLY2_BYTES; ++i)
-        tmp[i] = bytes[i] & 0x80;
-    load16_littleendian(buf, DATA_OFFSET * 7, tmp);
+        tmp[i] = bytes[i] & 0x80;                   // tmp[i] = bytes[i] & 1000 0000
+    load16_littleendian(buf, DATA_OFFSET * 7, tmp); // 8bit -> 16bit
 
     int shift[7] = { 1, 2, 3, 4, 5, 6, 7 };
     for (i = 0; i < 2; ++i) {
         for (j = 0; j < DATA_OFFSET; ++j) {
-            data->coeffs[d_idx + j] |= (buf[j] >> shift[0]) & 0x40;
+            data->coeffs[d_idx + j] |= (buf[j] >> shift[0]) & 0x40;     // buf[ 0~15 ]의 0100 0000를 data->coef[0~15+16*i]에 저장
             data->coeffs[d_idx + j] |=
-                (buf[DATA_OFFSET + j] >> shift[1]) & 0x20;
+                (buf[DATA_OFFSET + j] >> shift[1]) & 0x20;              // buf[16~31 ]의 0010 0000를 data->coef[0~15+16*i]에 저장
             data->coeffs[d_idx + j] |=
-                (buf[DATA_OFFSET * 2 + j] >> shift[2]) & 0x10;
+                (buf[DATA_OFFSET * 2 + j] >> shift[2]) & 0x10;          // buf[32~47 ]의 0001 0000를 data->coef[0~15+16*i]에 저장
             data->coeffs[d_idx + j] |=
-                (buf[DATA_OFFSET * 3 + j] >> shift[3]) & 0x08;
+                (buf[DATA_OFFSET * 3 + j] >> shift[3]) & 0x08;          // buf[48~63 ]의 0000 1000를 data->coef[0~15+16*i]에 저장
             data->coeffs[d_idx + j] |=
-                (buf[DATA_OFFSET * 4 + j] >> shift[4]) & 0x04;
+                (buf[DATA_OFFSET * 4 + j] >> shift[4]) & 0x04;          // buf[64~79 ]의 0000 0100를 data->coef[0~15+16*i]에 저장
             data->coeffs[d_idx + j] |=
-                (buf[DATA_OFFSET * 5 + j] >> shift[5]) & 0x02;
+                (buf[DATA_OFFSET * 5 + j] >> shift[5]) & 0x02;          // buf[80~95 ]의 0000 0010를 data->coef[0~15+16*i]에 저장
             data->coeffs[d_idx + j] |=
-                (buf[DATA_OFFSET * 6 + j] >> shift[6]) & 0x01;
+                (buf[DATA_OFFSET * 6 + j] >> shift[6]) & 0x01;          // buf[96~111]의 0000 0001를 data->coef[0~15+16*i]에 저장
         }
         d_idx += DATA_OFFSET;
         for (j = 0; j < 7; ++j)
@@ -1602,13 +1603,13 @@ static void sp_cbd2(poly* r, const uint8_t buf[CBDSEED_BYTES]) {
 
     for (i = 0; i < LWE_N / 8; i++) {
         t = load32_littleendian(buf + 4 * i);
-        d = t & 0x11111111;
-        d |= (t >> 1) & 0x11111111;
-        d &= (t >> 2) & 0x11111111;
-        s = (t >> 3) & 0x11111111;
+        d = t & 0x11111111;             // t의 0001 0001 0001 0001 0001 0001 0001 0001 을 d에 저장                                                                  (1일 확률 1/2)
+        d |= (t >> 1) & 0x11111111;     // t의 0010 0010 0010 0010 0010 0010 0010 0010 을 d에 저장                                                                  (1일 확률 3/4)
+        d &= (t >> 2) & 0x11111111;     // t의 0100 0100 0100 0100 0100 0100 0100 0100 과 d의 0001 0001 ... 0001가 모두 1인 경우세만 d에 0001 ... 0001을 저장         (1일 확률 3/8)
+        s = (t >> 3) & 0x11111111;      // t의 1000 1000 1000 1000 1000 1000 1000 1000 을 s에 저장                                                                  (1일 확률 1/2)
         for (j = 0; j < 8; j++) {
-            a = (d >> (4 * j)) & 0x1;
-            r->coeffs[8 * i + j] = a * (((((s >> (4 * j)) & 0x1) - 1) ^ -2) | 1);
+            a = (d >> (4 * j)) & 0x1;                                               // d의 맨 마지막 bit를 가져와서 a라고 해주고
+            r->coeffs[8 * i + j] = a * (((((s >> (4 * j)) & 0x1) - 1) ^ -2) | 1);   // s의 맨 마지막 bit를 가져와서 0 -> 1, 1 -> -1 과 a를 곱하는 것으로 +-1을 결정  r이 +1일 확률 = 3/8 * 1/2 = 3/16, -1일 확률 = 3/8 * 1/2 = 3/16 0일 확률 = 5/8
         }
     }
 }
@@ -1909,8 +1910,8 @@ void load_from_string_sk(secret_key* sk, const uint8_t* input) {
 }
 
 void save_to_string_pk(uint8_t* output, const public_key* pk) {
-    memcpy(output, pk->seed, sizeof(uint8_t) * PKSEED_BYTES);   // pk[0 ~ 31] = seed[32~63] 로 A행렬 정보 저장
-    Rq_vec_to_bytes(output + PKSEED_BYTES, &(pk->b));           // pk[32~351] = b vector를 byte 형식으로 저장
+    memcpy(output, pk->seed, sizeof(uint8_t) * PKSEED_BYTES);   // pk[0 ~ 31]                 = seed[32~63] 로 A행렬 정보 저장
+    Rq_vec_to_bytes(output + PKSEED_BYTES, &(pk->b));           // pk[32~ PUBLICKEY_BYTES+31] = b vector를 byte 형식으로 저장
 }
 
 void load_from_string_pk(public_key* pk, const uint8_t* input) {
